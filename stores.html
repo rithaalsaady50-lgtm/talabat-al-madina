@@ -1,157 +1,96 @@
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>متاجر طلبات المدينة</title>
 
 <style>
-* { box-sizing: border-box; }
-
-body {
-    margin: 0;
-    font-family: Arial, sans-serif;
-    background: #f3f5f8;
-}
-
-header {
-    background: #102a43;
-    color: white;
-    text-align: center;
-    padding: 20px;
-}
-
-.container { padding: 15px; }
-
-input {
-    width: 100%;
-    padding: 14px;
-    border: 1px solid #ddd;
-    border-radius: 10px;
-    font-size: 16px;
-    margin-bottom: 15px;
-}
-
-.stores {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-}
-
-.store {
-    background: white;
-    padding: 20px 10px;
-    text-align: center;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px #00000012;
-}
-
-.store h3 { color: #102a43; }
-
-button {
-    background: #16834a;
-    color: white;
-    border: none;
-    padding: 11px 15px;
-    border-radius: 8px;
-    font-size: 15px;
-    cursor: pointer;
-}
-
-.back {
-    background: #102a43;
-    margin-bottom: 15px;
-}
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial;background:#f3f5f8}
+header{background:#102a43;color:white;text-align:center;padding:20px}
+.container{padding:15px}
+input{width:100%;padding:14px;border:1px solid #ddd;border-radius:10px;font-size:16px;margin-bottom:15px}
+.stores{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.store{background:white;padding:18px 10px;text-align:center;border-radius:12px;box-shadow:0 2px 8px #00000012}
+.store h3{color:#102a43}
+button{background:#16834a;color:white;border:0;padding:11px 15px;border-radius:8px;font-size:15px}
+.back{background:#102a43;margin-bottom:15px}
+.message{background:white;padding:15px;border-radius:10px;text-align:center;grid-column:1/-1}
 </style>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
 <body>
-
 <header>
-    <h2>طلبات المدينة</h2>
-    <p>اختر المتجر الذي تريد الطلب منه</p>
+<h2>طلبات المدينة</h2>
+<p>اختر المتجر الذي تريد الطلب منه</p>
 </header>
 
 <div class="container">
-
-    <button class="back" onclick="location.href='index.html'">
-        رجوع للأقسام
-    </button>
-
-    <h3 id="categoryTitle">المتاجر</h3>
-
-    <input id="search" type="text"
-           placeholder="ابحث عن متجر..."
-           oninput="showStores()">
-
-    <div class="stores" id="stores"></div>
-
+<button class="back" onclick="location.href='index.html'">رجوع للأقسام</button>
+<h3 id="categoryTitle">المتاجر</h3>
+<input id="search" placeholder="ابحث عن متجر..." oninput="showStores()">
+<div class="stores" id="stores">
+<div class="message">جاري تحميل المتاجر...</div>
+</div>
 </div>
 
 <script>
+const SUPABASE_URL = "https://iombzxymujzetguqdhkq.supabase.co";
+const SUPABASE_KEY = "ضع_المفتاح_العام_هنا";
 
-// المتاجر الأصلية
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const defaultStores = [
-    {name:"مطعم المدينة", category:"مطاعم"},
-    {name:"مطعم الذوق", category:"مطاعم"},
-    {name:"ماركت النور", category:"ماركتات وسوبر ماركت"},
-    {name:"ماركت المدينة", category:"ماركتات وسوبر ماركت"},
-    {name:"صيدلية الشفاء", category:"صيدليات"},
-    {name:"صيدلية الحياة", category:"صيدليات"},
-    {name:"كوزمتك الجمال", category:"كوزمتكات"},
-    {name:"كوزمتك الأناقة", category:"كوزمتكات"},
-    {name:"ماركة الأناقة", category:"ماركات وملابس وأحذية"},
-    {name:"عالم الأحذية", category:"ماركات وملابس وأحذية"},
-    {name:"عالم الطفل", category:"حليب الأطفال ومستلزماتهم"},
-    {name:"مستلزمات الأطفال", category:"حليب الأطفال ومستلزماتهم"},
-    {name:"طلبات متنوعة", category:"طلبات متنوعة"}
-];
-
-// قراءة المتاجر التي أضافها المدير
-
-function getCustomStores() {
-    try {
-        const saved = JSON.parse(localStorage.getItem("cityStores"));
-        return Array.isArray(saved) ? saved : [];
-    } catch (error) {
-        return [];
-    }
-}
-
-// دمج المتاجر الأصلية والجديدة
-
-function getAllStores() {
-    return defaultStores.concat(getCustomStores());
-}
-
-const params = new URLSearchParams(window.location.search);
+const params = new URLSearchParams(location.search);
 const selectedCategory = (params.get("category") || "").trim();
 
 document.getElementById("categoryTitle").textContent =
-    selectedCategory ? selectedCategory : "جميع المتاجر";
+selectedCategory || "جميع المتاجر";
 
-function showStores() {
+let allStores = [];
+
+async function loadStores(){
+    const area = document.getElementById("stores");
+
+    try{
+        let query = db.from("stores")
+            .select("id,name,category,is_active")
+            .eq("is_active", true)
+            .order("name");
+
+        if(selectedCategory){
+            query = query.eq("category", selectedCategory);
+        }
+
+        const {data,error} = await query;
+
+        if(error) throw error;
+
+        allStores = data || [];
+        showStores();
+
+    }catch(error){
+        area.innerHTML =
+        '<div class="message">تعذر تحميل المتاجر. تأكد من إعدادات قاعدة البيانات والاتصال.</div>';
+        console.error(error);
+    }
+}
+
+function showStores(){
     const search = document.getElementById("search").value.trim();
     const area = document.getElementById("stores");
 
-    const allStores = getAllStores();
-
-    const filtered = allStores.filter(store => {
-        const matchesCategory =
-            !selectedCategory || store.category === selectedCategory;
-
-        const matchesSearch =
-            store.name.includes(search);
-
-        return matchesCategory && matchesSearch;
-    });
+    const filtered = allStores.filter(store =>
+        (store.name || "").includes(search)
+    );
 
     area.innerHTML = "";
 
-    if (filtered.length === 0) {
-        area.innerHTML = "<p>ماكو متاجر بهذا القسم حالياً.</p>";
+    if(filtered.length === 0){
+        area.innerHTML =
+        '<div class="message">لا توجد متاجر مفتوحة بهذا القسم حالياً.</div>';
         return;
     }
 
@@ -163,24 +102,23 @@ function showStores() {
         name.textContent = store.name;
 
         const category = document.createElement("p");
-        category.textContent = store.category;
+        category.textContent = store.category || "";
 
         const button = document.createElement("button");
         button.textContent = "عرض المنتجات";
 
-        button.onclick = function() {
-            location.href = "products.html?store=" +
-                encodeURIComponent(store.name);
+        button.onclick = function(){
+            location.href =
+            "products.html?storeId=" + encodeURIComponent(store.id) +
+            "&store=" + encodeURIComponent(store.name);
         };
 
-        card.append(name, category, button);
+        card.append(name,category,button);
         area.appendChild(card);
     });
 }
 
-showStores();
-
+loadStores();
 </script>
-
 </body>
 </html>
