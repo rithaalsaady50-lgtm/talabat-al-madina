@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -10,38 +11,131 @@ body{margin:0;font-family:Arial;background:#f3f5f8;color:#222}
 header{background:#102a43;color:white;text-align:center;padding:20px}
 main{padding:15px;max-width:700px;margin:auto}
 .card{background:white;padding:16px;margin:12px 0;border-radius:12px}
-h2{color:#102a43}
-button{background:#16834a;color:white;border:0;padding:12px;border-radius:8px;width:100%;font-size:16px}
+button{background:#16834a;color:white;border:0;padding:12px;border-radius:8px;width:100%;font-size:16px;margin-top:8px}
 input{width:100%;padding:12px;margin:8px 0;border:1px solid #ccc;border-radius:8px}
 #message{color:#b42318}
+.order{background:#f3f5f8;padding:12px;margin:10px 0;border-radius:8px}
 </style>
 </head>
 <body>
+
 <header>
 <h2>طلبات المدينة</h2>
 <p>لوحة تحكم المدير</p>
 </header>
+
 <main>
-<div class="card">
+<div class="card" id="loginBox">
 <h3>دخول المدير</h3>
 <input id="email" type="email" placeholder="البريد الإلكتروني">
 <input id="password" type="password" placeholder="كلمة المرور">
 <button onclick="login()">دخول</button>
 <p id="message"></p>
 </div>
+
 <div class="card" id="dashboard" hidden>
 <h3>لوحة التحكم</h3>
-<p>تم تسجيل الدخول بنجاح.</p>
+<p id="status">الطلبات</p>
+<div id="orders"></div>
+<button onclick="loadOrders()">تحديث الطلبات</button>
 <button onclick="logout()">تسجيل الخروج</button>
 </div>
 </main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-function login(){
- document.getElementById("message").textContent =
- "نظام دخول المدير يحتاج إلى إعداد حساب آمن أولاً.";
+const SUPABASE_URL = "https://iombzxymujzetguqdhkq.supabase.co";
+const SUPABASE_KEY = "sb_publishable_dTg1TjFIepJqVTycKHe42A_DW0ZwNT_";
+
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+async function login(){
+ const email=document.getElementById("email").value.trim();
+ const password=document.getElementById("password").value;
+ const message=document.getElementById("message");
+
+ if(!email || !password){
+  message.textContent="أدخل البريد وكلمة المرور";
+  return;
+ }
+
+ message.textContent="جاري تسجيل الدخول...";
+
+ const {data,error}=await db.auth.signInWithPassword({email,password});
+
+ if(error){
+  message.textContent="تعذر تسجيل الدخول. تحقق من البيانات.";
+  return;
+ }
+
+ const {data:admin,error:adminError}=await db
+ .from("admin_users")
+ .select("user_id")
+ .eq("user_id",data.user.id)
+ .maybeSingle();
+
+ if(adminError || !admin){
+  await db.auth.signOut();
+  message.textContent="هذا الحساب ليس لديه صلاحية المدير.";
+  return;
+ }
+
+ document.getElementById("loginBox").hidden=true;
+ document.getElementById("dashboard").hidden=false;
+ await loadOrders();
 }
-function logout(){
+
+async function loadOrders(){
+ const status=document.getElementById("status");
+ const box=document.getElementById("orders");
+
+ status.textContent="جاري تحميل الطلبات...";
+ box.replaceChildren();
+
+ const {data,error}=await db
+  .from("orders")
+  .select("id,customer_name,total,status,created_at")
+  .order("created_at",{ascending:false});
+
+ if(error){
+  status.textContent="تعذر تحميل الطلبات.";
+  return;
+ }
+
+ if(!data || data.length===0){
+  status.textContent="لا توجد طلبات حالياً.";
+  return;
+ }
+
+ status.textContent="عدد الطلبات: "+data.length;
+
+ data.forEach(order=>{
+  const card=document.createElement("div");
+  card.className="order";
+
+  const title=document.createElement("h3");
+  title.textContent="طلب رقم: "+order.id;
+
+  const customer=document.createElement("p");
+  customer.textContent="الزبون: "+(order.customer_name||"غير محدد");
+
+  const total=document.createElement("p");
+  total.textContent="المجموع: "+(order.total||0)+" دينار";
+
+  const state=document.createElement("p");
+  state.textContent="الحالة: "+(order.status||"جديد");
+
+  card.append(title,customer,total,state);
+  box.appendChild(card);
+ });
+}
+
+async function logout(){
+ await db.auth.signOut();
  document.getElementById("dashboard").hidden=true;
+ document.getElementById("loginBox").hidden=false;
+ document.getElementById("password").value="";
+ document.getElementById("message").textContent="تم تسجيل الخروج.";
 }
 </script>
 </body>
