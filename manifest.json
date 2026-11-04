@@ -1,0 +1,10 @@
+{
+  "name": "طلبات المدينة",
+  "short_name": "طلبات المدينة",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f3f5f8",
+  "theme_color": "#102a43",
+  "lang": "ar",
+  "dir": "rtl"
+}
