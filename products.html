@@ -1,0 +1,586 @@
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>طلبات المدينة - المنتجات</title>
+
+<style>
+*{box-sizing:border-box}
+
+body{
+    margin:0;
+    font-family:Arial,sans-serif;
+    background:#f3f5f8;
+    color:#222;
+}
+
+header{
+    background:#102a43;
+    color:white;
+    text-align:center;
+    padding:18px;
+}
+
+.container{padding:15px;max-width:900px;margin:auto}
+
+.products{
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:12px;
+}
+
+.product,.cart,.checkout{
+    background:white;
+    padding:15px;
+    border-radius:12px;
+    margin-bottom:15px;
+    box-shadow:0 2px 8px #00000012;
+}
+
+.product{text-align:center}
+
+.product img{
+    width:100%;
+    height:130px;
+    object-fit:contain;
+}
+
+.emoji{font-size:40px}
+
+.price,.total{
+    color:#16834a;
+    font-weight:bold;
+}
+
+button{
+    border:none;
+    padding:12px;
+    border-radius:8px;
+    color:white;
+    background:#16834a;
+    font-size:15px;
+    cursor:pointer;
+}
+
+.back{background:#102a43}
+.delete{background:#c0392b}
+.small-btn{padding:7px 12px}
+
+input,textarea{
+    width:100%;
+    padding:13px;
+    margin:7px 0 14px;
+    border:1px solid #ccc;
+    border-radius:8px;
+    font-size:16px;
+    font-family:Arial;
+}
+
+textarea{min-height:80px}
+
+.checkout button{width:100%;margin-top:10px}
+
+.notice{
+    background:#fff4d6;
+    padding:12px;
+    border-radius:8px;
+    color:#795500;
+    line-height:1.7;
+}
+
+#success{
+    display:none;
+    background:#e1f5e8;
+    color:#176b38;
+    padding:15px;
+    border-radius:10px;
+    line-height:1.8;
+    margin-bottom:20px;
+}
+
+.final-total{
+    font-size:19px;
+    font-weight:bold;
+    background:#d5efdd;
+    padding:12px;
+    border-radius:8px;
+}
+
+.cart-row{
+    padding:12px 0;
+    border-bottom:1px solid #ddd;
+}
+
+.quantity-controls{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-top:8px;
+    flex-wrap:wrap;
+}
+
+.quantity{
+    font-weight:bold;
+    min-width:25px;
+    text-align:center;
+}
+
+#success button{
+    width:100%;
+    margin-top:10px;
+}
+
+.empty{
+    background:white;
+    padding:18px;
+    border-radius:10px;
+    text-align:center;
+    color:#777;
+    grid-column:1/-1;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <h2>طلبات المدينة</h2>
+    <p>تسوّق واطلب بسهولة</p>
+</header>
+
+<div class="container">
+
+<button class="back" onclick="history.back()">رجوع</button>
+
+<h2 id="storeName">المتجر</h2>
+
+<h3>منتجات المتجر</h3>
+<div class="products" id="products"></div>
+
+<div class="cart">
+    <h2>🛒 سلة المشتريات</h2>
+    <p id="cartCount">عدد المنتجات: 0</p>
+    <div id="cartItems">السلة فارغة</div>
+    <p class="total" id="total">مجموع المنتجات: 0 دينار</p>
+</div>
+
+<div class="checkout">
+    <h2>إتمام الطلب</h2>
+
+    <div class="notice">
+        أجرة التوصيل يحددها المدير بعد مراجعة الطلب.
+        ستظهر لك الأجرة والمبلغ النهائي في تفاصيل طلبك.
+    </div>
+
+    <form id="orderForm">
+
+        <label>اسم الزبون</label>
+        <input type="text" id="customerName"
+        placeholder="اكتب اسمك" required>
+
+        <label>رقم الهاتف</label>
+        <input type="tel" id="customerPhone"
+        placeholder="اكتب رقم هاتفك" required>
+
+        <label>عنوان التوصيل</label>
+        <input type="text" id="customerAddress"
+        placeholder="المنطقة والشارع وأقرب نقطة دالة" required>
+
+        <label>ملاحظات إضافية (اختياري)</label>
+        <textarea id="customerNotes"
+        placeholder="اكتب ملاحظاتك هنا"></textarea>
+
+        <button type="submit">تأكيد الطلب</button>
+
+    </form>
+</div>
+
+<div id="success"></div>
+
+</div>
+
+<script>
+const params = new URLSearchParams(window.location.search);
+const store = params.get("store") || "المتجر";
+
+document.getElementById("storeName").textContent = store;
+
+let cart = [];
+let currentOrderId = null;
+
+/* تنسيق الأسعار */
+function money(value){
+    return Number(value || 0).toLocaleString("en-US") + " دينار";
+}
+
+/* قراءة البيانات المحفوظة */
+function readData(key){
+    try{
+        const data = JSON.parse(localStorage.getItem(key) || "[]");
+        return Array.isArray(data) ? data : [];
+    }catch(error){
+        return [];
+    }
+}
+
+/* تحميل منتجات المتجر */
+function getStoreProducts(){
+    const allProducts = readData("cityProducts");
+
+    return allProducts
+        .filter(function(product){
+            return product.storeName === store;
+        })
+        .map(function(product){
+            return {
+                id:product.id,
+                name:product.name,
+                price:Number(product.price),
+                image:product.image || "",
+                emoji:"🛍️"
+            };
+        });
+}
+
+let products = getStoreProducts();
+
+/* عرض المنتجات */
+function showProducts(){
+
+    const area = document.getElementById("products");
+    area.innerHTML = "";
+
+    if(products.length === 0){
+        area.innerHTML =
+        '<div class="empty">لا توجد منتجات مضافة لهذا المتجر حالياً.</div>';
+        return;
+    }
+
+    products.forEach(function(product,index){
+
+        const card = document.createElement("div");
+        card.className = "product";
+
+        if(product.image){
+            const img = document.createElement("img");
+            img.src = product.image;
+            img.alt = product.name;
+            card.appendChild(img);
+        }else{
+            const emoji = document.createElement("div");
+            emoji.className = "emoji";
+            emoji.textContent = product.emoji;
+            card.appendChild(emoji);
+        }
+
+        const name = document.createElement("h3");
+        name.textContent = product.name;
+
+        const price = document.createElement("p");
+        price.className = "price";
+        price.textContent = money(product.price);
+
+        const button = document.createElement("button");
+        button.textContent = "أضف إلى السلة";
+
+        button.onclick = function(){
+            addToCart(index);
+        };
+
+        card.append(name,price,button);
+        area.appendChild(card);
+    });
+}
+
+/* إضافة للسلة */
+function addToCart(index){
+
+    const product = products[index];
+
+    const existing = cart.find(function(item){
+        return item.id === product.id;
+    });
+
+    if(existing){
+        existing.quantity++;
+    }else{
+        cart.push({
+            ...product,
+            quantity:1
+        });
+    }
+
+    showCart();
+}
+
+/* تغيير الكمية */
+function changeQuantity(index,amount){
+
+    cart[index].quantity += amount;
+
+    if(cart[index].quantity <= 0){
+        cart.splice(index,1);
+    }
+
+    showCart();
+}
+
+/* حذف منتج من السلة */
+function removeItem(index){
+    cart.splice(index,1);
+    showCart();
+}
+
+/* حساب المجموع */
+function calculateTotal(){
+
+    return cart.reduce(function(sum,item){
+        return sum + item.price * item.quantity;
+    },0);
+}
+
+/* عرض السلة */
+function showCart(){
+
+    const area = document.getElementById("cartItems");
+    area.innerHTML = "";
+
+    let count = 0;
+
+    cart.forEach(function(item,index){
+
+        count += item.quantity;
+
+        const row = document.createElement("div");
+        row.className = "cart-row";
+
+        const name = document.createElement("strong");
+        name.textContent = item.name;
+
+        const price = document.createElement("p");
+        price.textContent = money(item.price) + " للقطعة";
+
+        const subtotal = document.createElement("p");
+        subtotal.className = "price";
+        subtotal.textContent =
+        "المجموع: " + money(item.price * item.quantity);
+
+        const controls = document.createElement("div");
+        controls.className = "quantity-controls";
+
+        const minus = document.createElement("button");
+        minus.className = "small-btn back";
+        minus.textContent = "-";
+        minus.onclick = function(){
+            changeQuantity(index,-1);
+        };
+
+        const quantity = document.createElement("span");
+        quantity.className = "quantity";
+        quantity.textContent = item.quantity;
+
+        const plus = document.createElement("button");
+        plus.className = "small-btn";
+        plus.textContent = "+";
+        plus.onclick = function(){
+            changeQuantity(index,1);
+        };
+
+        const remove = document.createElement("button");
+        remove.className = "delete small-btn";
+        remove.textContent = "حذف";
+        remove.onclick = function(){
+            removeItem(index);
+        };
+
+        controls.append(minus,quantity,plus,remove);
+        row.append(name,price,subtotal,controls);
+        area.appendChild(row);
+    });
+
+    if(cart.length === 0){
+        area.textContent = "السلة فارغة";
+    }
+
+    document.getElementById("cartCount").textContent =
+    "عدد المنتجات: " + count;
+
+    document.getElementById("total").textContent =
+    "مجموع المنتجات: " + money(calculateTotal());
+}
+
+/* قراءة الطلبات */
+function getOrders(){
+    return readData("cityOrders");
+}
+
+/* عرض تفاصيل الطلب */
+function showOrderDetails(){
+
+    if(currentOrderId === null) return;
+
+    const orders = getOrders();
+
+    const order = orders.find(function(item){
+        return String(item.id) === String(currentOrderId);
+    });
+
+    const area = document.getElementById("success");
+
+    if(!order){
+        area.textContent = "لم يتم العثور على الطلب.";
+        return;
+    }
+
+    area.style.display = "block";
+    area.innerHTML = "";
+
+    const title = document.createElement("h3");
+    title.textContent = "✅ تفاصيل طلبك";
+
+    const number = document.createElement("p");
+    number.textContent = "رقم الطلب: " + order.id;
+
+    const storeText = document.createElement("p");
+    storeText.textContent = "المتجر: " + order.store;
+
+    const customer = document.createElement("p");
+    customer.textContent = "الزبون: " + order.customerName;
+
+    const productsList = document.createElement("div");
+    productsList.textContent = "المنتجات:";
+
+    order.products.forEach(function(item){
+
+        const line = document.createElement("p");
+        line.textContent =
+        item.name + " × " + item.quantity +
+        " = " + money(item.price * item.quantity);
+
+        productsList.appendChild(line);
+    });
+
+    const productsTotal = document.createElement("p");
+    productsTotal.textContent =
+    "مجموع المنتجات: " + money(order.total);
+
+    const fee = document.createElement("p");
+    const finalTotal = document.createElement("p");
+    finalTotal.className = "final-total";
+
+    if(order.deliveryFee == null){
+
+        fee.textContent = "أجرة التوصيل: بانتظار تحديد المدير";
+        finalTotal.textContent = "المبلغ النهائي: لم يحدد بعد";
+
+    }else{
+
+        fee.textContent =
+        "أجرة التوصيل: " + money(order.deliveryFee);
+
+        finalTotal.textContent =
+        "المبلغ النهائي: " +
+        money(Number(order.total) + Number(order.deliveryFee));
+    }
+
+    const status = document.createElement("p");
+    status.textContent =
+    "حالة الطلب: " + (order.status || "بانتظار مراجعة المدير");
+
+    const refresh = document.createElement("button");
+    refresh.textContent = "تحديث تفاصيل الطلب";
+    refresh.onclick = showOrderDetails;
+
+    area.append(
+        title,number,storeText,customer,
+        productsList,productsTotal,fee,
+        finalTotal,status,refresh
+    );
+}
+
+/* تأكيد الطلب */
+document.getElementById("orderForm").addEventListener(
+"submit",function(event){
+
+    event.preventDefault();
+
+    if(cart.length === 0){
+        alert("أضف منتجاً واحداً على الأقل إلى السلة");
+        return;
+    }
+
+    const customerName =
+    document.getElementById("customerName").value.trim();
+
+    const customerPhone =
+    document.getElementById("customerPhone").value.trim();
+
+    const customerAddress =
+    document.getElementById("customerAddress").value.trim();
+
+    const customerNotes =
+    document.getElementById("customerNotes").value.trim();
+
+    if(!customerName || !customerPhone || !customerAddress){
+        alert("يرجى إكمال جميع البيانات المطلوبة");
+        return;
+    }
+
+    const total = calculateTotal();
+
+    const order = {
+        id:Date.now(),
+        store:store,
+        customerName:customerName,
+        customerPhone:customerPhone,
+
+        // أسماء الحقول المتوافقة مع لوحة المدير وطلباتي
+        address:customerAddress,
+        customerAddress:customerAddress,
+        notes:customerNotes,
+        customerNotes:customerNotes,
+
+        products:cart.map(function(item){
+            return {
+                name:item.name,
+                price:item.price,
+                quantity:item.quantity
+            };
+        }),
+
+        total:total,
+        deliveryFee:null,
+        status:"بانتظار مراجعة المدير",
+        date:new Date().toLocaleString("ar-IQ")
+    };
+
+    const orders = getOrders();
+    orders.push(order);
+
+    try{
+        localStorage.setItem("cityOrders",JSON.stringify(orders));
+    }catch(error){
+        alert("تعذر حفظ الطلب. تحقق من مساحة التخزين.");
+        return;
+    }
+
+    currentOrderId = order.id;
+
+    document.getElementById("orderForm").reset();
+
+    cart = [];
+    showCart();
+    showOrderDetails();
+
+    alert("تم تسجيل طلبك بنجاح");
+});
+
+/* تشغيل الصفحة */
+showProducts();
+showCart();
+
+</script>
+</body>
+</html>
