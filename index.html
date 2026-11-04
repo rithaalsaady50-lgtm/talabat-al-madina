@@ -1,0 +1,192 @@
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>طلبات المدينة</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Arial;
+    background: #f3f5f9;
+    color: #172554;
+}
+
+header {
+    background: #172554;
+    color: white;
+    padding: 25px 15px;
+    text-align: center;
+}
+
+.container {
+    padding: 16px;
+}
+
+.search {
+    width: 100%;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    font-size: 16px;
+    margin: 15px 0;
+}
+
+.my-orders {
+    display: block;
+    width: 100%;
+    padding: 15px;
+    margin: 15px 0 22px;
+    background: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 17px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.categories {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 13px;
+}
+
+.category {
+    background: white;
+    padding: 22px 8px;
+    border-radius: 15px;
+    text-align: center;
+    box-shadow: 0 2px 8px #ddd;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.emoji {
+    font-size: 35px;
+    display: block;
+    margin-bottom: 10px;
+}
+
+.category:active {
+    background: #e0e7ff;
+}
+
+footer {
+    text-align: center;
+    padding: 25px;
+    color: #64748b;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <h1>طلبات المدينة 🛍️</h1>
+    <p>كل احتياجاتك توصلك لحد باب البيت</p>
+</header>
+
+<div class="container">
+
+    <h2>أهلاً وسهلاً بك 👋</h2>
+
+    <button class="my-orders"
+    onclick="location.href='myorders.html'">
+        📋 طلباتي
+    </button>
+
+    <input
+        class="search"
+        id="search"
+        type="text"
+        placeholder="ابحث عن قسم..."
+        oninput="searchCategories()">
+
+    <h2>أقسام التسوق</h2>
+
+    <div class="categories">
+
+        <div class="category" data-name="مطاعم"
+        onclick="openStores('مطاعم')">
+            <span class="emoji">🍔</span>
+            مطاعم
+        </div>
+
+        <div class="category" data-name="ماركتات وسوبر ماركت"
+        onclick="openStores('ماركتات وسوبر ماركت')">
+            <span class="emoji">🛒</span>
+            ماركتات وسوبر ماركت
+        </div>
+
+        <div class="category" data-name="صيدليات"
+        onclick="openStores('صيدليات')">
+            <span class="emoji">💊</span>
+            صيدليات
+        </div>
+
+        <div class="category" data-name="كوزمتكات"
+        onclick="openStores('كوزمتكات')">
+            <span class="emoji">💄</span>
+            كوزمتكات
+        </div>
+
+        <div class="category" data-name="ماركات وملابس وأحذية"
+        onclick="openStores('ماركات وملابس وأحذية')">
+            <span class="emoji">👕</span>
+            ماركات وملابس وأحذية
+        </div>
+
+        <div class="category" data-name="حليب الأطفال ومستلزماتهم"
+        onclick="openStores('حليب الأطفال ومستلزماتهم')">
+            <span class="emoji">🍼</span>
+            حليب الأطفال ومستلزماتهم
+        </div>
+
+        <div class="category" data-name="طلبات متنوعة"
+        onclick="openStores('طلبات متنوعة')">
+            <span class="emoji">📦</span>
+            طلبات متنوعة
+        </div>
+
+    </div>
+</div>
+
+<footer>
+    طلبات المدينة © 2026
+</footer>
+
+<script>
+
+function openStores(category) {
+    location.href =
+    "stores.html?category=" +
+    encodeURIComponent(category);
+}
+
+function searchCategories() {
+
+    let value = document.getElementById("search")
+    .value.trim();
+
+    document.querySelectorAll(".category")
+    .forEach(function(item) {
+
+        item.style.display =
+        item.dataset.name.includes(value)
+        ? "block" : "none";
+
+    });
+}
+
+</script>
+
+</body>
+</html>
+
