@@ -1,24 +1,28 @@
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>لوحة المدير - طلبات المدينة</title>
+
 <style>
 *{box-sizing:border-box}
 body{margin:0;font-family:Arial;background:#f3f5f8;color:#222}
 header{background:#102a43;color:white;text-align:center;padding:20px}
 main{padding:15px;max-width:700px;margin:auto}
 .card{background:white;padding:16px;margin:12px 0;border-radius:12px}
-button{background:#16834a;color:white;border:0;padding:12px;border-radius:8px;width:100%;font-size:16px;margin-top:8px}
+button{background:#16834a;color:white;border:0;padding:12px;border-radius:8px;width:100%;font-size:15px;margin-top:8px}
 input{width:100%;padding:12px;margin:8px 0;border:1px solid #ccc;border-radius:8px}
 #message{color:#b42318}
 .order{background:#f3f5f8;padding:12px;margin:10px 0;border-radius:8px}
+.order button{font-size:14px}
+.cancel{background:#b42318}
+.delivery{background:#245b9e}
+.done{background:#16834a}
 </style>
 </head>
-<body>
 
+<body>
 <header>
 <h2>طلبات المدينة</h2>
 <p>لوحة تحكم المدير</p>
@@ -85,6 +89,24 @@ async function login(){
  await loadOrders();
 }
 
+async function changeStatus(orderId,newStatus){
+ const status=document.getElementById("status");
+ status.textContent="جاري تحديث حالة الطلب...";
+
+ const {error}=await db
+  .from("orders")
+  .update({status:newStatus})
+  .eq("id",orderId);
+
+ if(error){
+  status.textContent="تعذر تحديث الحالة: "+error.message;
+  return;
+ }
+
+ status.textContent="تم تحديث حالة الطلب رقم "+orderId;
+ await loadOrders();
+}
+
 async function loadOrders(){
  const status=document.getElementById("status");
  const box=document.getElementById("orders");
@@ -98,7 +120,7 @@ async function loadOrders(){
   .order("created_at",{ascending:false});
 
  if(error){
-  status.textContent="تعذر تحميل الطلبات.";
+  status.textContent="تعذر تحميل الطلبات: "+error.message;
   return;
  }
 
@@ -126,6 +148,26 @@ async function loadOrders(){
   state.textContent="الحالة: "+(order.status||"جديد");
 
   card.append(title,customer,total,state);
+
+  const actions=[
+   {label:"قبول الطلب",value:"تم قبول الطلب",className:""},
+   {label:"قيد التوصيل",value:"قيد التوصيل",className:"delivery"},
+   {label:"تم التسليم",value:"تم التسليم",className:"done"},
+   {label:"إلغاء الطلب",value:"تم الإلغاء",className:"cancel"}
+  ];
+
+  actions.forEach(action=>{
+   const button=document.createElement("button");
+   button.textContent=action.label;
+   if(action.className) button.className=action.className;
+
+   button.addEventListener("click",()=>{
+    changeStatus(order.id,action.value);
+   });
+
+   card.appendChild(button);
+  });
+
   box.appendChild(card);
  });
 }
