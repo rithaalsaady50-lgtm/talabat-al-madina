@@ -83,14 +83,17 @@ input,select{width:100%;padding:12px;margin:8px 0;border:1px solid #ccc;border-r
 </div>
 
 </div>
-
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-const SUPABASE_URL = "https://iombzxymujzetguqdhkq.supabase.co";
-const SUPABASE_KEY = "sb_publishable_dTg1TjFIepJqVTycKHe42A_DW0ZwNT_";
-const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+<script>
+const SUPABASE_URL="https://iombzxymujzetguqdhkq.supabase.co";
+
+
+const SUPABASE_KEY="sb_publishable_dTg1TjFIepJqVTycKHe42A_DW0ZwNT_";
+
+const db=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 
 async function login(){
 
@@ -192,7 +195,7 @@ async function loadOrders(){
 
  const {data,error}=await db
   .from("orders")
-  .select("id,customer_name,total,status,created_at,customer_notes,products")
+  .select("id,customer_name,customer_phone,customer_address,total,status,created_at,customer_notes,products")
   .order("created_at",{ascending:false});
 
  if(error){
@@ -217,6 +220,8 @@ async function loadOrders(){
   card.appendChild(title);
 
   addText(card,"الزبون: ",order.customer_name);
+  addText(card,"رقم هاتف الزبون: ",order.customer_phone);
+  addText(card,"عنوان التوصيل: ",order.customer_address);
   addText(card,"المجموع: ",order.total+" دينار");
   addText(card,"الحالة: ",order.status||"جديد");
 
