@@ -9,17 +9,22 @@
 *{box-sizing:border-box}
 body{margin:0;font-family:Arial;background:#f3f5f8;color:#222}
 header{background:#102a43;color:white;text-align:center;padding:20px}
-main{padding:15px;max-width:700px;margin:auto}
+main{padding:15px;max-width:750px;margin:auto}
 .card{background:white;padding:16px;margin:12px 0;border-radius:12px}
-button{background:#16834a;color:white;border:0;padding:12px;border-radius:8px;width:100%;font-size:15px;margin-top:8px}
-input{width:100%;padding:12px;margin:8px 0;border:1px solid #ccc;border-radius:8px}
+button{background:#16834a;color:white;border:0;padding:12px;border-radius:8px;width:100%;font-size:15px;margin-top:8px;cursor:pointer}
+input,select{width:100%;padding:12px;margin:8px 0;border:1px solid #ccc;border-radius:8px}
 #message{color:#b42318}
-.order{background:#f3f5f8;padding:12px;margin:10px 0;border-radius:8px}
+.order,.store{background:#f3f5f8;padding:12px;margin:10px 0;border-radius:8px}
 .product{background:white;padding:10px;margin:7px 0;border-radius:8px}
 .delivery{background:#245b9e}
 .done{background:#16834a}
 .cancel{background:#b42318}
+.edit{background:#d18b16}
 .details{border-top:1px solid #ddd;margin-top:12px;padding-top:10px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap}
+.tabs button{flex:1;min-width:110px}
+.hidden{display:none}
+.store img{max-width:100%;height:130px;object-fit:cover;border-radius:8px}
 </style>
 </head>
 
@@ -40,12 +45,43 @@ input{width:100%;padding:12px;margin:8px 0;border:1px solid #ccc;border-radius:8
 <p id="message"></p>
 </div>
 
-<div class="card" id="dashboard" hidden>
+<div id="dashboard" hidden>
+
+<div class="card">
 <h3>لوحة التحكم</h3>
-<p id="status">الطلبات</p>
+<div class="tabs">
+<button onclick="showSection('ordersSection')">الطلبات</button>
+<button onclick="showSection('storesSection')">إدارة المتاجر</button>
+</div>
+<p id="status">مرحباً بك في لوحة المدير</p>
+</div>
+
+<div class="card" id="ordersSection">
+<h3>إدارة الطلبات</h3>
 <div id="orders"></div>
 <button onclick="loadOrders()">تحديث الطلبات</button>
+</div>
+
+<div class="card hidden" id="storesSection">
+<h3>إضافة متجر جديد</h3>
+
+<input id="storeName" placeholder="اسم المتجر">
+<input id="storeCategory" placeholder="تصنيف المتجر">
+<input id="storeImage" placeholder="رابط صورة المتجر (اختياري)">
+
+<button onclick="addStore()">إضافة المتجر</button>
+
+<div class="details">
+<h3>المتاجر الموجودة</h3>
+<div id="storesList"></div>
+<button onclick="loadStores()">تحديث المتاجر</button>
+</div>
+</div>
+
+<div class="card">
 <button onclick="logout()">تسجيل الخروج</button>
+</div>
+
 </div>
 
 </main>
@@ -54,10 +90,7 @@ input{width:100%;padding:12px;margin:8px 0;border:1px solid #ccc;border-radius:8
 
 <script>
 const SUPABASE_URL="https://iombzxymujzetguqdhkq.supabase.co";
-
-/* ضع مفتاح Publishable الخاص بمشروعك هنا */
-const SUPABASE_KEY="const SUPABASE_KEY="sb_publishable_dTg1TjFIepJqVTycKHe42A_DW0ZwNT_";";
-
+const SUPABASE_KEY="sb_publishable_dTg1TjFIepJqVTycKHe42A_DW0ZwNT_
 const db=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 
 async function login(){
@@ -74,8 +107,7 @@ async function login(){
  message.textContent="جاري تسجيل الدخول...";
 
  const {data,error}=await db.auth.signInWithPassword({
-  email,
-  password
+  email,password
  });
 
  if(error){
@@ -84,10 +116,10 @@ async function login(){
  }
 
  const {data:admin,error:adminError}=await db
- .from("admin_users")
- .select("user_id")
- .eq("user_id",data.user.id)
- .maybeSingle();
+  .from("admin_users")
+  .select("user_id")
+  .eq("user_id",data.user.id)
+  .maybeSingle();
 
  if(adminError||!admin){
   await db.auth.signOut();
@@ -99,14 +131,19 @@ async function login(){
  document.getElementById("dashboard").hidden=false;
 
  await loadOrders();
+ await loadStores();
+}
+
+function showSection(id){
+ document.getElementById("ordersSection").classList.add("hidden");
+ document.getElementById("storesSection").classList.add("hidden");
+ document.getElementById(id).classList.remove("hidden");
 }
 
 function addText(parent,label,value){
-
  const p=document.createElement("p");
  p.textContent=label+(value??"غير متوفر");
  parent.appendChild(p);
-
 }
 
 function showProducts(parent,products){
@@ -121,69 +158,29 @@ function showProducts(parent,products){
  let items=products;
 
  if(typeof items==="string"){
-  try{
-   items=JSON.parse(items);
-  }catch(e){
-   items=[];
-  }
+  try{items=JSON.parse(items)}catch(e){items=[]}
  }
 
  if(!Array.isArray(items)||items.length===0){
-
   addText(section,"المنتجات: ","لا توجد تفاصيل");
-
  }else{
-
   items.forEach(item=>{
-
    const product=document.createElement("div");
    product.className="product";
 
    if(typeof item==="string"){
-
     product.textContent=item;
-
    }else{
-
-    const name=item.name||item.product_name||item.title||"منتج";
-    const quantity=item.quantity??item.qty??1;
-    const price=item.price??0;
-
-    addText(product,"المنتج: ",name);
-    addText(product,"الكمية: ",quantity);
-    addText(product,"السعر: ",price+" دينار");
-
+    addText(product,"المنتج: ",item.name||item.product_name||item.title||"منتج");
+    addText(product,"الكمية: ",item.quantity??item.qty??1);
+    addText(product,"السعر: ",(item.price??0)+" دينار");
    }
 
    section.appendChild(product);
-
   });
-
  }
 
  parent.appendChild(section);
-
-}
-
-async function changeStatus(orderId,newStatus){
-
- const status=document.getElementById("status");
- status.textContent="جاري تحديث حالة الطلب...";
-
- const {error}=await db
-  .from("orders")
-  .update({status:newStatus})
-  .eq("id",orderId);
-
- if(error){
-  status.textContent="تعذر تحديث الحالة: "+error.message;
-  return;
- }
-
- status.textContent="تم تحديث حالة الطلب.";
-
- await loadOrders();
-
 }
 
 async function loadOrders(){
@@ -228,42 +225,202 @@ async function loadOrders(){
 
   const notes=document.createElement("div");
   notes.className="details";
-
-  const notesTitle=document.createElement("h4");
-  notesTitle.textContent="ملاحظات الزبون";
-  notes.appendChild(notesTitle);
-
-  addText(notes,"الملاحظات: ",order.customer_notes||"لا توجد ملاحظات");
+  addText(notes,"ملاحظات الزبون: ",order.customer_notes||"لا توجد ملاحظات");
   card.appendChild(notes);
 
   const actions=[
-   {label:"قبول الطلب",value:"تم قبول الطلب",className:""},
+   {label:"قبول الطلب",value:"تم قبول الطلب"},
    {label:"قيد التوصيل",value:"قيد التوصيل",className:"delivery"},
    {label:"تم التسليم",value:"تم التسليم",className:"done"},
    {label:"إلغاء الطلب",value:"تم الإلغاء",className:"cancel"}
   ];
 
   actions.forEach(action=>{
-
    const button=document.createElement("button");
    button.textContent=action.label;
-
-   if(action.className){
-    button.className=action.className;
-   }
-
-   button.addEventListener("click",()=>{
-    changeStatus(order.id,action.value);
-   });
-
+   if(action.className)button.className=action.className;
+   button.onclick=()=>changeStatus(order.id,action.value);
    card.appendChild(button);
-
   });
 
   box.appendChild(card);
-
  });
+}
 
+async function changeStatus(orderId,newStatus){
+
+ const status=document.getElementById("status");
+ status.textContent="جاري تحديث حالة الطلب...";
+
+ const {error}=await db
+  .from("orders")
+  .update({status:newStatus})
+  .eq("id",orderId);
+
+ if(error){
+  status.textContent="تعذر تحديث الحالة: "+error.message;
+  return;
+ }
+
+ status.textContent="تم تحديث حالة الطلب.";
+ await loadOrders();
+}
+
+/* إضافة متجر */
+
+async function addStore(){
+
+ const name=document.getElementById("storeName").value.trim();
+ const category=document.getElementById("storeCategory").value.trim();
+ const image=document.getElementById("storeImage").value.trim();
+ const status=document.getElementById("status");
+
+ if(!name||!category){
+  status.textContent="اكتب اسم المتجر والتصنيف.";
+  return;
+ }
+
+ status.textContent="جاري إضافة المتجر...";
+
+ const {error}=await db
+  .from("stores")
+  .insert({
+   name:name,
+   category:category,
+   image:image,
+   is_active:true
+  });
+
+ if(error){
+  status.textContent="تعذر إضافة المتجر: "+error.message;
+  return;
+ }
+
+ document.getElementById("storeName").value="";
+ document.getElementById("storeCategory").value="";
+ document.getElementById("storeImage").value="";
+
+ status.textContent="تمت إضافة المتجر بنجاح.";
+ await loadStores();
+}
+
+/* عرض المتاجر */
+
+async function loadStores(){
+
+ const box=document.getElementById("storesList");
+ const status=document.getElementById("status");
+
+ box.replaceChildren();
+
+ const {data,error}=await db
+  .from("stores")
+  .select("id,name,category,image,is_active,created_at")
+  .order("id",{ascending:false});
+
+ if(error){
+  status.textContent="تعذر تحميل المتاجر: "+error.message;
+  return;
+ }
+
+ if(!data||data.length===0){
+  box.textContent="لا توجد متاجر حالياً.";
+  return;
+ }
+
+ data.forEach(store=>{
+
+  const card=document.createElement("div");
+  card.className="store";
+
+  const title=document.createElement("h3");
+  title.textContent=store.name;
+  card.appendChild(title);
+
+  if(store.image){
+   const img=document.createElement("img");
+   img.src=store.image;
+   img.alt=store.name;
+   img.onerror=()=>img.remove();
+   card.appendChild(img);
+  }
+
+  addText(card,"رقم المتجر: ",store.id);
+  addText(card,"التصنيف: ",store.category);
+  addText(card,"الحالة: ",store.is_active?"مفتوح":"مغلق");
+
+  const nameInput=document.createElement("input");
+  nameInput.value=store.name||"";
+  nameInput.placeholder="اسم المتجر";
+  card.appendChild(nameInput);
+
+  const categoryInput=document.createElement("input");
+  categoryInput.value=store.category||"";
+  categoryInput.placeholder="التصنيف";
+  card.appendChild(categoryInput);
+
+  const imageInput=document.createElement("input");
+  imageInput.value=store.image||"";
+  imageInput.placeholder="رابط الصورة";
+  card.appendChild(imageInput);
+
+  const editButton=document.createElement("button");
+  editButton.className="edit";
+  editButton.textContent="حفظ التعديلات";
+  editButton.onclick=async()=>{
+
+   if(!nameInput.value.trim()||!categoryInput.value.trim()){
+    status.textContent="اسم المتجر والتصنيف مطلوبان.";
+    return;
+   }
+
+   status.textContent="جاري حفظ التعديلات...";
+
+   const {error}=await db
+    .from("stores")
+    .update({
+     name:nameInput.value.trim(),
+     category:categoryInput.value.trim(),
+     image:imageInput.value.trim()
+    })
+    .eq("id",store.id);
+
+   if(error){
+    status.textContent="تعذر تعديل المتجر: "+error.message;
+    return;
+   }
+
+   status.textContent="تم تعديل المتجر بنجاح.";
+   await loadStores();
+  };
+
+  card.appendChild(editButton);
+
+  const toggleButton=document.createElement("button");
+  toggleButton.className=store.is_active?"cancel":"done";
+  toggleButton.textContent=store.is_active?"إغلاق المتجر":"فتح المتجر";
+
+  toggleButton.onclick=async()=>{
+
+   status.textContent="جاري تغيير حالة المتجر...";
+
+   const {error}=await db
+    .from("stores")
+    .update({is_active:!store.is_active})
+    .eq("id",store.id);
+
+   if(error){
+    status.textContent="تعذر تغيير الحالة: "+error.message;
+    return;
+   }
+
+   status.textContent="تم تغيير حالة المتجر.";
+   await loadStores();
+  };
+
+  card.appendChild(toggleButton);
+  box.appendChild(card);
+ });
 }
 
 async function logout(){
