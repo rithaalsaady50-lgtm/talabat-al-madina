@@ -37,14 +37,12 @@ textarea{min-height:80px}
 </head>
 
 <body>
-
 <header>
 <h2>طلبات المدينة 🛍️</h2>
 <p>تسوّق واطلب بسهولة</p>
 </header>
 
 <div class="container">
-
 <button class="back" onclick="history.back()">رجوع</button>
 
 <h2 id="storeName">المتجر</h2>
@@ -63,10 +61,7 @@ textarea{min-height:80px}
 
 <div class="checkout">
 <h2>إتمام الطلب</h2>
-
-<div class="notice">
-أجرة التوصيل يحددها المدير بعد مراجعة الطلب.
-</div>
+<div class="notice">أجرة التوصيل يحددها المدير بعد مراجعة الطلب.</div>
 
 <form id="orderForm">
 <label>اسم الزبون</label>
@@ -86,7 +81,6 @@ textarea{min-height:80px}
 </div>
 
 <div id="result" aria-live="polite"></div>
-
 </div>
 
 <script>
@@ -94,12 +88,9 @@ const SUPABASE_URL =
 "https://iombzxymujzetguqdhkq.supabase.co";
 
 const SUPABASE_KEY =
-"sb_publishable_dTg1TjFIepJqVTycKHe42A_DW0ZwNT_";
+"ضع_مفتاح_Publishable_الخاص_بك_هنا";
 
-const db = supabase.createClient(
-SUPABASE_URL,
-SUPABASE_KEY
-);
+const db = supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 
 const params = new URLSearchParams(location.search);
 const storeId = Number(params.get("storeId"));
@@ -135,14 +126,21 @@ async function loadProducts(){
  try{
   const {data,error} = await db
    .from("products")
-   .select("id,name,price,image,store_id")
+   .select("id,name,price,image,store_id,is_active")
    .eq("store_id",storeId)
+   .eq("is_active",true)
    .order("created_at",{ascending:false});
 
   if(error) throw error;
 
   products = data || [];
+
+  const activeIds = products.map(p=>p.id);
+
+  cart = cart.filter(item=>activeIds.includes(item.id));
+
   showProducts();
+  showCart();
 
  }catch(error){
   console.error(error);
@@ -157,7 +155,7 @@ function showProducts(){
 
  if(products.length === 0){
   productsArea.textContent =
-   "لا توجد منتجات في هذا المتجر حالياً.";
+   "لا توجد منتجات نشطة في هذا المتجر حالياً.";
   return;
  }
 
@@ -191,8 +189,9 @@ function showProducts(){
 }
 
 function addToCart(index){
-
  const product = products[index];
+ if(!product || !product.is_active) return;
+
  const existing = cart.find(item=>item.id === product.id);
 
  if(existing){
@@ -258,7 +257,6 @@ function showCart(){
 
   controls.append(minus,quantity,plus);
   row.append(name,price,subtotal,controls);
-
   cartArea.appendChild(row);
  });
 
@@ -303,27 +301,56 @@ document.getElementById("orderForm")
   return;
  }
 
- const order = {
-  customer_name: customerName,
-  customer_phone: customerPhone,
-  customer_address: customerAddress,
-  customer_notes: customerNotes,
-  store_id: storeId,
-  products: cart.map(item=>({
-   id: item.id,
-   name: item.name,
-   price: Number(item.price),
-   quantity: item.quantity
-  })),
-  total: total(),
-  delivery_fee: null,
-  status: "بانتظار مراجعة المدير"
- };
-
  submitButton.disabled = true;
- submitButton.textContent = "جاري إرسال الطلب...";
+ submitButton.textContent = "جاري التحقق من المنتجات...";
 
  try{
+
+  const {data:activeProducts,error:checkError} = await db
+   .from("products")
+   .select("id,name,price,is_active")
+   .eq("store_id",storeId)
+   .eq("is_active",true)
+   .in("id",cart.map(item=>item.id));
+
+  if(checkError) throw checkError;
+
+  if(!activeProducts || activeProducts.length !== cart.length){
+   cart = cart.filter(item =>
+    activeProducts && activeProducts.some(p=>p.id === item.id)
+   );
+   showCart();
+   await loadProducts();
+   throw new Error("بعض المنتجات توقفت. راجع السلة وحاول مجدداً.");
+  }
+
+  const verifiedCart = cart.map(item=>{
+   const current = activeProducts.find(p=>p.id === item.id);
+   return {
+    id:current.id,
+    name:current.name,
+    price:Number(current.price),
+    quantity:item.quantity
+   };
+  });
+
+  const verifiedTotal = verifiedCart.reduce((sum,item)=>{
+   return sum + item.price * item.quantity;
+  },0);
+
+  submitButton.textContent = "جاري إرسال الطلب...";
+
+  const order = {
+   customer_name:customerName,
+   customer_phone:customerPhone,
+   customer_address:customerAddress,
+   customer_notes:customerNotes,
+   store_id:storeId,
+   products:verifiedCart,
+   total:verifiedTotal,
+   delivery_fee:null,
+   status:"بانتظار مراجعة المدير"
+  };
 
   const {error} = await db
    .from("orders")
@@ -333,7 +360,7 @@ document.getElementById("orderForm")
 
   resultArea.className = "message success";
   resultArea.textContent =
-   "تم إرسال الطلب بنجاح. سيظهر للمدير بعد تحديث الطلبات.";
+   "تم إرسال الطلب بنجاح.";
 
   cart = [];
   showCart();
@@ -342,14 +369,12 @@ document.getElementById("orderForm")
  }catch(error){
 
   console.error("Order error:",error);
-
   resultArea.className = "message error";
   resultArea.textContent =
    "تعذر إرسال الطلب.\nسبب الخطأ: " +
    (error.message || "خطأ غير معروف");
 
  }finally{
-
   submitButton.disabled = false;
   submitButton.textContent = "تأكيد الطلب";
  }
@@ -358,6 +383,5 @@ document.getElementById("orderForm")
 showCart();
 loadProducts();
 </script>
-
 </body>
 </html>
