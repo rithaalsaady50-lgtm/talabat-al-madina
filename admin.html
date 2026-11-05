@@ -88,10 +88,9 @@ input,select{width:100%;padding:12px;margin:8px 0;border:1px solid #ccc;border-r
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-<script>
-const SUPABASE_URL="https://iombzxymujzetguqdhkq.supabase.co";
-const SUPABASE_KEY="sb_publishable_dTg1TjFIepJqVTycKHe42A_DW0ZwNT_";
-const db=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const SUPABASE_URL = "https://iombzxymujzetguqdhkq.supabase.co";
+const SUPABASE_KEY = "sb_publishable_dTg1TjFIepJqVTycKHe42A_DW0ZwNT_";
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 async function login(){
 
