@@ -15,20 +15,23 @@ button{background:#16834a;color:white;border:0;padding:12px;border-radius:8px;wi
 input{width:100%;padding:12px;margin:8px 0;border:1px solid #ccc;border-radius:8px}
 #message{color:#b42318}
 .order{background:#f3f5f8;padding:12px;margin:10px 0;border-radius:8px}
-.order button{font-size:14px}
-.cancel{background:#b42318}
+.product{background:white;padding:10px;margin:7px 0;border-radius:8px}
 .delivery{background:#245b9e}
 .done{background:#16834a}
+.cancel{background:#b42318}
+.details{border-top:1px solid #ddd;margin-top:12px;padding-top:10px}
 </style>
 </head>
 
 <body>
+
 <header>
 <h2>طلبات المدينة</h2>
 <p>لوحة تحكم المدير</p>
 </header>
 
 <main>
+
 <div class="card" id="loginBox">
 <h3>دخول المدير</h3>
 <input id="email" type="email" placeholder="البريد الإلكتروني">
@@ -44,28 +47,36 @@ input{width:100%;padding:12px;margin:8px 0;border:1px solid #ccc;border-radius:8
 <button onclick="loadOrders()">تحديث الطلبات</button>
 <button onclick="logout()">تسجيل الخروج</button>
 </div>
+
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-const SUPABASE_URL = "https://iombzxymujzetguqdhkq.supabase.co";
-const SUPABASE_KEY = "sb_publishable_dTg1TjFIepJqVTycKHe42A_DW0ZwNT_";
 
-const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+<script>
+const SUPABASE_URL="https://iombzxymujzetguqdhkq.supabase.co";
+
+/* ضع مفتاح Publishable الخاص بمشروعك هنا */
+const SUPABASE_KEY="const SUPABASE_KEY="sb_publishable_dTg1TjFIepJqVTycKHe42A_DW0ZwNT_";";
+
+const db=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 
 async function login(){
+
  const email=document.getElementById("email").value.trim();
  const password=document.getElementById("password").value;
  const message=document.getElementById("message");
 
- if(!email || !password){
+ if(!email||!password){
   message.textContent="أدخل البريد وكلمة المرور";
   return;
  }
 
  message.textContent="جاري تسجيل الدخول...";
 
- const {data,error}=await db.auth.signInWithPassword({email,password});
+ const {data,error}=await db.auth.signInWithPassword({
+  email,
+  password
+ });
 
  if(error){
   message.textContent="تعذر تسجيل الدخول. تحقق من البيانات.";
@@ -78,7 +89,7 @@ async function login(){
  .eq("user_id",data.user.id)
  .maybeSingle();
 
- if(adminError || !admin){
+ if(adminError||!admin){
   await db.auth.signOut();
   message.textContent="هذا الحساب ليس لديه صلاحية المدير.";
   return;
@@ -86,10 +97,76 @@ async function login(){
 
  document.getElementById("loginBox").hidden=true;
  document.getElementById("dashboard").hidden=false;
+
  await loadOrders();
 }
 
+function addText(parent,label,value){
+
+ const p=document.createElement("p");
+ p.textContent=label+(value??"غير متوفر");
+ parent.appendChild(p);
+
+}
+
+function showProducts(parent,products){
+
+ const section=document.createElement("div");
+ section.className="details";
+
+ const heading=document.createElement("h4");
+ heading.textContent="تفاصيل المنتجات";
+ section.appendChild(heading);
+
+ let items=products;
+
+ if(typeof items==="string"){
+  try{
+   items=JSON.parse(items);
+  }catch(e){
+   items=[];
+  }
+ }
+
+ if(!Array.isArray(items)||items.length===0){
+
+  addText(section,"المنتجات: ","لا توجد تفاصيل");
+
+ }else{
+
+  items.forEach(item=>{
+
+   const product=document.createElement("div");
+   product.className="product";
+
+   if(typeof item==="string"){
+
+    product.textContent=item;
+
+   }else{
+
+    const name=item.name||item.product_name||item.title||"منتج";
+    const quantity=item.quantity??item.qty??1;
+    const price=item.price??0;
+
+    addText(product,"المنتج: ",name);
+    addText(product,"الكمية: ",quantity);
+    addText(product,"السعر: ",price+" دينار");
+
+   }
+
+   section.appendChild(product);
+
+  });
+
+ }
+
+ parent.appendChild(section);
+
+}
+
 async function changeStatus(orderId,newStatus){
+
  const status=document.getElementById("status");
  status.textContent="جاري تحديث حالة الطلب...";
 
@@ -103,11 +180,14 @@ async function changeStatus(orderId,newStatus){
   return;
  }
 
- status.textContent="تم تحديث حالة الطلب رقم "+orderId;
+ status.textContent="تم تحديث حالة الطلب.";
+
  await loadOrders();
+
 }
 
 async function loadOrders(){
+
  const status=document.getElementById("status");
  const box=document.getElementById("orders");
 
@@ -116,7 +196,7 @@ async function loadOrders(){
 
  const {data,error}=await db
   .from("orders")
-  .select("id,customer_name,total,status,created_at")
+  .select("id,customer_name,total,status,created_at,customer_notes,products")
   .order("created_at",{ascending:false});
 
  if(error){
@@ -124,7 +204,7 @@ async function loadOrders(){
   return;
  }
 
- if(!data || data.length===0){
+ if(!data||data.length===0){
   status.textContent="لا توجد طلبات حالياً.";
   return;
  }
@@ -132,22 +212,29 @@ async function loadOrders(){
  status.textContent="عدد الطلبات: "+data.length;
 
  data.forEach(order=>{
+
   const card=document.createElement("div");
   card.className="order";
 
   const title=document.createElement("h3");
   title.textContent="طلب رقم: "+order.id;
+  card.appendChild(title);
 
-  const customer=document.createElement("p");
-  customer.textContent="الزبون: "+(order.customer_name||"غير محدد");
+  addText(card,"الزبون: ",order.customer_name);
+  addText(card,"المجموع: ",order.total+" دينار");
+  addText(card,"الحالة: ",order.status||"جديد");
 
-  const total=document.createElement("p");
-  total.textContent="المجموع: "+(order.total||0)+" دينار";
+  showProducts(card,order.products);
 
-  const state=document.createElement("p");
-  state.textContent="الحالة: "+(order.status||"جديد");
+  const notes=document.createElement("div");
+  notes.className="details";
 
-  card.append(title,customer,total,state);
+  const notesTitle=document.createElement("h4");
+  notesTitle.textContent="ملاحظات الزبون";
+  notes.appendChild(notesTitle);
+
+  addText(notes,"الملاحظات: ",order.customer_notes||"لا توجد ملاحظات");
+  card.appendChild(notes);
 
   const actions=[
    {label:"قبول الطلب",value:"تم قبول الطلب",className:""},
@@ -157,28 +244,39 @@ async function loadOrders(){
   ];
 
   actions.forEach(action=>{
+
    const button=document.createElement("button");
    button.textContent=action.label;
-   if(action.className) button.className=action.className;
+
+   if(action.className){
+    button.className=action.className;
+   }
 
    button.addEventListener("click",()=>{
     changeStatus(order.id,action.value);
    });
 
    card.appendChild(button);
+
   });
 
   box.appendChild(card);
+
  });
+
 }
 
 async function logout(){
+
  await db.auth.signOut();
+
  document.getElementById("dashboard").hidden=true;
  document.getElementById("loginBox").hidden=false;
  document.getElementById("password").value="";
  document.getElementById("message").textContent="تم تسجيل الخروج.";
+
 }
 </script>
+
 </body>
 </html>
