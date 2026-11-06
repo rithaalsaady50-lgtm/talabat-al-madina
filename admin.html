@@ -37,7 +37,7 @@ button:disabled{opacity:.5}
 .muted{color:#666;font-size:13px}
 a.contact{display:inline-block;text-decoration:none;color:white;background:#245b9e;padding:9px 12px;border-radius:8px;margin:4px 2px}
 a.whatsapp{background:#16834a}
-a.map-link{background:#16834a}
+a.map-link{background:#33a6d9}
 .fee-box{background:#eaf2ff;padding:10px;border-radius:8px;margin:10px 0}
 @media(max-width:480px){
 .filters{grid-template-columns:1fr}
@@ -154,10 +154,9 @@ a.map-link{background:#16834a}
 const SUPABASE_URL =
 "https://iombzxymujzetguqdhkq.supabase.co";
 
-// ضع مفتاح Publishable الخاص بمشروعك هنا.
+// استخدم مفتاح Publishable الموجود في ملفك السابق
 // لا تستخدم مفتاح Secret أو service_role.
-const SUPABASE_KEY =
-"sb_publishable_dTg1TjFIepJqVTycKHe42A_DW0ZwNT_";
+const SUPABASE_KEY = "sb_publishable_dTg1TjFIepJqVTycKHe42A_DW0ZwNT_";
 
 const db = supabase.createClient(
  SUPABASE_URL,
@@ -392,7 +391,7 @@ function renderOrders(){
   addText(card,"رقم الهاتف: ",order.customer_phone);
   addText(card,"العنوان: ",order.customer_address);
 
-  // عرض موقع الزبون على الخريطة
+  // عرض موقع الزبون على Waze
   const lat=Number(order.customer_latitude);
   const lng=Number(order.customer_longitude);
 
@@ -411,12 +410,13 @@ function renderOrders(){
 
    mapLink.className="contact map-link";
    mapLink.href=
-    "https://www.google.com/maps?q="+
-    encodeURIComponent(lat+","+lng);
+    "https://waze.com/ul?ll="+
+    encodeURIComponent(lat+","+lng)+
+    "&navigate=yes";
 
    mapLink.target="_blank";
    mapLink.rel="noopener";
-   mapLink.textContent="📍 فتح موقع الزبون على الخريطة";
+   mapLink.textContent="🚗 عرض موقع الزبون على Waze";
 
    card.appendChild(mapLink);
 
