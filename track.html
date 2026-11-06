@@ -1,0 +1,241 @@
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>متابعة الطلب - طلبات المدينة</title>
+
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;
+ font-family:Arial,sans-serif;
+ background:#f3f5f8;
+ color:#222;
+}
+header{
+ background:#102a43;
+ color:white;
+ text-align:center;
+ padding:22px;
+}
+.container{
+ max-width:600px;
+ margin:auto;
+ padding:18px;
+}
+.card{
+ background:white;
+ padding:20px;
+ border-radius:14px;
+ margin-top:18px;
+ box-shadow:0 2px 8px #00000012;
+}
+input{
+ width:100%;
+ padding:14px;
+ border:1px solid #ccc;
+ border-radius:8px;
+ font-size:16px;
+ margin:10px 0;
+}
+button{
+ width:100%;
+ border:0;
+ padding:14px;
+ border-radius:8px;
+ color:white;
+ background:#16834a;
+ font-size:16px;
+ cursor:pointer;
+}
+.status{
+ padding:15px;
+ background:#e8f5ed;
+ color:#16834a;
+ border-radius:10px;
+ text-align:center;
+ font-weight:bold;
+ font-size:19px;
+ margin:15px 0;
+}
+.info{
+ line-height:2;
+ border-bottom:1px solid #eee;
+ padding:10px 0;
+}
+.error{
+ color:#b42318;
+ background:#fff0f0;
+ padding:12px;
+ border-radius:8px;
+ margin-top:12px;
+}
+.hidden{display:none}
+.small{
+ color:#666;
+ font-size:13px;
+ text-align:center;
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body>
+
+<header>
+<h2>🚚 طلبات المدينة</h2>
+<p>متابعة حالة طلبك</p>
+</header>
+
+<div class="container">
+
+<div class="card">
+<h2>متابعة الطلب</h2>
+<p>أدخل رقم المتابعة الذي ظهر لك بعد تأكيد الطلب.</p>
+
+<input
+ id="trackingToken"
+ type="text"
+ placeholder="رقم متابعة الطلب"
+ autocomplete="off"
+>
+
+<button id="searchButton" onclick="trackOrder()">
+متابعة الطلب
+</button>
+
+<div id="result"></div>
+</div>
+
+<p class="small">طلبات المدينة © جميع الحقوق محفوظة</p>
+
+</div>
+
+<script>
+const SUPABASE_URL =
+"https://iombzxymujzetguqdhkq.supabase.co";
+
+const SUPABASE_KEY =
+"sb_publishable_dTg1TjFIepJqVTycKHe42A_DW0ZwNT_";
+
+const db = supabase.createClient(
+ SUPABASE_URL,
+ SUPABASE_KEY.trim()
+);
+
+const input = document.getElementById("trackingToken");
+const result = document.getElementById("result");
+const searchButton = document.getElementById("searchButton");
+
+const params = new URLSearchParams(location.search);
+const urlToken = params.get("token");
+
+if(urlToken){
+ input.value = urlToken;
+ trackOrder();
+}
+
+function addInfo(parent,label,value){
+
+ const row = document.createElement("div");
+ row.className = "info";
+
+ const strong = document.createElement("strong");
+ strong.textContent = label + ": ";
+
+ const span = document.createElement("span");
+ span.textContent = value;
+
+ row.append(strong,span);
+ parent.appendChild(row);
+}
+
+function formatMoney(value){
+ return Number(value || 0).toLocaleString("en-US") + " دينار";
+}
+
+function formatDate(value){
+ if(!value) return "غير متوفر";
+
+ return new Date(value).toLocaleString("ar-IQ");
+}
+
+async function trackOrder(){
+
+ const token = input.value.trim();
+
+ result.replaceChildren();
+
+ if(!token){
+  result.textContent = "يرجى إدخال رقم المتابعة.";
+  result.className = "error";
+  return;
+ }
+
+ searchButton.disabled = true;
+ searchButton.textContent = "جاري البحث...";
+
+ try{
+
+  const {data,error} = await db.rpc(
+   "track_order",
+   {p_tracking_token:token}
+  );
+
+  if(error) throw error;
+
+  if(!data || data.length === 0){
+   result.textContent =
+    "لم يتم العثور على الطلب. تأكد من رقم المتابعة.";
+   result.className = "error";
+   return;
+  }
+
+  const order = data[0];
+
+  const card = document.createElement("div");
+  card.className = "card";
+
+  const heading = document.createElement("h3");
+  heading.textContent = "تفاصيل متابعة الطلب";
+
+  const status = document.createElement("div");
+  status.className = "status";
+  status.textContent = order.order_status;
+
+  card.append(heading,status);
+
+  addInfo(card,"حالة الطلب",order.order_status);
+  addInfo(card,"المجموع النهائي",formatMoney(order.order_total));
+  addInfo(card,"تاريخ الطلب",formatDate(order.order_date));
+
+  const note = document.createElement("p");
+  note.className = "small";
+  note.textContent =
+   "يتم تحديث حالة الطلب عند تغييرها من لوحة المدير.";
+
+  card.appendChild(note);
+
+  result.appendChild(card);
+  result.className = "";
+
+ }catch(error){
+
+  console.error(error);
+  result.textContent =
+   "تعذر متابعة الطلب: " + error.message;
+  result.className = "error";
+
+ }finally{
+
+  searchButton.disabled = false;
+  searchButton.textContent = "متابعة الطلب";
+ }
+}
+</script>
+
+</body>
+</html>
