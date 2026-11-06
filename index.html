@@ -2,201 +2,193 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>طلبات المدينة</title>
-<link rel="manifest" href="./manifest.json">
-<meta name="theme-color" content="#172554">
-<style>
-* {
-    box-sizing: border-box;
-}
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
 
-body {
-    margin: 0;
-    font-family: Arial;
-    background: #f3f5f9;
-    color: #172554;
-}
+  <title>طلبات المدينة</title>
 
-header {
-    background: #172554;
-    color: white;
-    padding: 25px 15px;
-    text-align: center;
-}
+  <meta name="description" content="طلبات المدينة - كل احتياجاتك توصلك لحد باب البيت">
+  <meta name="theme-color" content="#102a43">
 
-.container {
-    padding: 16px;
-}
+  <link rel="manifest" href="./manifest.json">
 
-.search {
-    width: 100%;
-    padding: 15px;
-    border: 1px solid #ddd;
-    border-radius: 12px;
-    font-size: 16px;
-    margin: 15px 0;
-}
+  <style>
+    * {
+      box-sizing: border-box;
+    }
 
-.my-orders {
-    display: block;
-    width: 100%;
-    padding: 15px;
-    margin: 15px 0 22px;
-    background: #2563eb;
-    color: white;
-    border: none;
-    border-radius: 12px;
-    font-size: 17px;
-    font-weight: bold;
-    cursor: pointer;
-}
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f3f5f8;
+      color: #222;
+    }
 
-.categories {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 13px;
-}
+    header {
+      background: #102a43;
+      color: white;
+      text-align: center;
+      padding: 25px 15px;
+    }
 
-.category {
-    background: white;
-    padding: 22px 8px;
-    border-radius: 15px;
-    text-align: center;
-    box-shadow: 0 2px 8px #ddd;
-    cursor: pointer;
-    font-size: 16px;
-}
+    header h1 {
+      margin: 0 0 10px;
+      font-size: 27px;
+    }
 
-.emoji {
-    font-size: 35px;
-    display: block;
-    margin-bottom: 10px;
-}
+    header p {
+      margin: 0;
+      font-size: 15px;
+    }
 
-.category:active {
-    background: #e0e7ff;
-}
+    .container {
+      padding: 18px;
+      max-width: 650px;
+      margin: auto;
+    }
 
-footer {
-    text-align: center;
-    padding: 25px;
-    color: #64748b;
-}
-</style>
+    .welcome {
+      background: white;
+      padding: 20px;
+      border-radius: 14px;
+      text-align: center;
+      box-shadow: 0 2px 8px #00000010;
+      margin-bottom: 18px;
+    }
+
+    .welcome h2 {
+      color: #102a43;
+      margin-top: 0;
+    }
+
+    .menu {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .item {
+      background: white;
+      border-radius: 14px;
+      padding: 20px 10px;
+      text-align: center;
+      text-decoration: none;
+      color: #102a43;
+      box-shadow: 0 2px 8px #00000010;
+      font-size: 17px;
+      font-weight: bold;
+    }
+
+    .item span {
+      display: block;
+      font-size: 35px;
+      margin-bottom: 10px;
+    }
+
+    .install {
+      display: none;
+      width: 100%;
+      border: none;
+      border-radius: 10px;
+      padding: 14px;
+      margin-top: 18px;
+      background: #16834a;
+      color: white;
+      font-size: 17px;
+      font-weight: bold;
+    }
+
+    footer {
+      text-align: center;
+      padding: 22px;
+      color: #666;
+      font-size: 13px;
+    }
+  </style>
 </head>
 
 <body>
 
-<header>
-    <h1>طلبات المدينة 🛍️</h1>
+  <header>
+    <h1>طلبات المدينة</h1>
     <p>كل احتياجاتك توصلك لحد باب البيت</p>
-</header>
+  </header>
 
-<div class="container">
+  <main class="container">
 
-    <h2>أهلاً وسهلاً بك 👋</h2>
+    <section class="welcome">
+      <h2>أهلاً وسهلاً بك</h2>
+      <p>اطلب احتياجاتك بسهولة من متاجر مدينتك.</p>
+    </section>
 
-    <button class="my-orders"
-    onclick="location.href='myorders.html'">
-        📋 طلباتي
+    <section class="menu">
+
+      <a class="item" href="./stores.html">
+        <span>🏪</span>
+        المتاجر
+      </a>
+
+      <a class="item" href="./products.html?storeId=1&store=مطعم%20تجريبي">
+        <span>🍔</span>
+        المنتجات
+      </a>
+
+      <a class="item" href="./admin.html">
+        <span>⚙️</span>
+        لوحة المدير
+      </a>
+
+      <a class="item" href="./stores.html">
+        <span>🛵</span>
+        اطلب الآن
+      </a>
+
+    </section>
+
+    <button id="installButton" class="install">
+      تثبيت تطبيق طلبات المدينة
     </button>
 
-    <input
-        class="search"
-        id="search"
-        type="text"
-        placeholder="ابحث عن قسم..."
-        oninput="searchCategories()">
+  </main>
 
-    <h2>أقسام التسوق</h2>
+  <footer>
+    جميع الحقوق محفوظة © طلبات المدينة
+  </footer>
 
-    <div class="categories">
-
-        <div class="category" data-name="مطاعم"
-        onclick="openStores('مطاعم')">
-            <span class="emoji">🍔</span>
-            مطاعم
-        </div>
-
-        <div class="category" data-name="ماركتات وسوبر ماركت"
-        onclick="openStores('ماركتات وسوبر ماركت')">
-            <span class="emoji">🛒</span>
-            ماركتات وسوبر ماركت
-        </div>
-
-        <div class="category" data-name="صيدليات"
-        onclick="openStores('صيدليات')">
-            <span class="emoji">💊</span>
-            صيدليات
-        </div>
-
-        <div class="category" data-name="كوزمتكات"
-        onclick="openStores('كوزمتكات')">
-            <span class="emoji">💄</span>
-            كوزمتكات
-        </div>
-
-        <div class="category" data-name="ماركات وملابس وأحذية"
-        onclick="openStores('ماركات وملابس وأحذية')">
-            <span class="emoji">👕</span>
-            ماركات وملابس وأحذية
-        </div>
-
-        <div class="category" data-name="حليب الأطفال ومستلزماتهم"
-        onclick="openStores('حليب الأطفال ومستلزماتهم')">
-            <span class="emoji">🍼</span>
-            حليب الأطفال ومستلزماتهم
-        </div>
-
-        <div class="category" data-name="طلبات متنوعة"
-        onclick="openStores('طلبات متنوعة')">
-            <span class="emoji">📦</span>
-            طلبات متنوعة
-        </div>
-
-    </div>
-</div>
-
-<footer>
-    طلبات المدينة © 2026
-</footer>
-
-<script>
-
-function openStores(category) {
-    location.href =
-    "stores.html?category=" +
-    encodeURIComponent(category);
-}
-
-function searchCategories() {
-
-    let value = document.getElementById("search")
-    .value.trim();
-
-    document.querySelectorAll(".category")
-    .forEach(function(item) {
-
-        item.style.display =
-        item.dataset.name.includes(value)
-        ? "block" : "none";
-
-    });
-}
-
-</script>
-<script>
-if ("serviceWorker" in navigator) {
-    window.addEventListener("load", function() {
+  <script>
+    // تسجيل Service Worker
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", function () {
         navigator.serviceWorker.register("./sw.js")
-        .catch(function(error) {
-            console.log(error);
-        });
+          .catch(function (error) {
+            console.log("Service Worker:", error);
+          });
+      });
+    }
+
+    // زر تثبيت التطبيق إذا كان المتصفح يدعم ذلك
+    let installPrompt = null;
+    const installButton = document.getElementById("installButton");
+
+    window.addEventListener("beforeinstallprompt", function (event) {
+      event.preventDefault();
+      installPrompt = event;
+      installButton.style.display = "block";
     });
-}
-                </script>
+
+    installButton.addEventListener("click", async function () {
+      if (!installPrompt) return;
+
+      installPrompt.prompt();
+      await installPrompt.userChoice;
+      installPrompt = null;
+      installButton.style.display = "none";
+    });
+
+    window.addEventListener("appinstalled", function () {
+      installButton.style.display = "none";
+    });
+  </script>
+
 </body>
 </html>
-
