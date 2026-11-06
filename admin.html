@@ -21,15 +21,14 @@ button:disabled{opacity:.5}
 .edit{background:#d18b16}
 .hidden{display:none!important}
 .tabs{display:flex;gap:7px;flex-wrap:wrap}
-.tabs button{flex:1;min-width:105px}
-.order,.store,.product{background:#f3f5f8;padding:12px;margin:10px 0;border-radius:9px;overflow-wrap:anywhere}
+.tabs button{flex:1;min-width:100px}
+.order,.store,.product,.driver{background:#f3f5f8;padding:12px;margin:10px 0;border-radius:9px;overflow-wrap:anywhere}
 .details{border-top:1px solid #ddd;margin-top:10px;padding-top:9px}
 .actions{display:flex;gap:7px;flex-wrap:wrap}
 .actions button{flex:1}
 .stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
 .stat{background:#f3f5f8;border-radius:9px;padding:12px}
 .stat strong{display:block;font-size:22px;color:#16834a;margin-top:7px}
-.stat small{color:#555}
 .filters{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .notice{padding:10px;border-radius:8px;background:#eaf2ff;margin:9px 0;overflow-wrap:anywhere}
 .error{background:#ffe9e9;color:#a00}
@@ -38,17 +37,17 @@ button:disabled{opacity:.5}
 a.contact{display:inline-block;text-decoration:none;color:white;background:#245b9e;padding:9px 12px;border-radius:8px;margin:4px 2px}
 a.whatsapp{background:#16834a}
 a.map-link{background:#33a6d9}
-.fee-box{background:#eaf2ff;padding:10px;border-radius:8px;margin:10px 0}
 @media(max-width:480px){
-.filters{grid-template-columns:1fr}
-.stats{gap:7px}
-.stat{padding:10px}
-.stat strong{font-size:19px}
+ .filters{grid-template-columns:1fr}
+ .stats{gap:7px}
+ .stat{padding:10px}
+ .stat strong{font-size:19px}
 }
 </style>
 </head>
 
 <body>
+
 <header>
 <h2>طلبات المدينة</h2>
 <p>لوحة تحكم المدير</p>
@@ -58,8 +57,8 @@ a.map-link{background:#33a6d9}
 
 <section class="card" id="loginBox">
 <h3>دخول المدير</h3>
-<input id="email" type="email" placeholder="البريد الإلكتروني" autocomplete="username">
-<input id="password" type="password" placeholder="كلمة المرور" autocomplete="current-password">
+<input id="email" type="email" placeholder="البريد الإلكتروني">
+<input id="password" type="password" placeholder="كلمة المرور">
 <button id="loginButton" onclick="login()">دخول</button>
 <div id="loginMessage" class="notice hidden"></div>
 </section>
@@ -69,14 +68,13 @@ a.map-link{background:#33a6d9}
 <div class="card">
 <h3>الإحصائيات</h3>
 <div class="stats">
-<div class="stat"><small>كل الطلبات</small><strong id="statAll">0</strong></div>
-<div class="stat"><small>طلبات جديدة</small><strong id="statNew">0</strong></div>
-<div class="stat"><small>قيد التوصيل</small><strong id="statDelivery">0</strong></div>
-<div class="stat"><small>تم التسليم</small><strong id="statDone">0</strong></div>
-<div class="stat"><small>الطلبات الملغاة</small><strong id="statCancelled">0</strong></div>
-<div class="stat"><small>مجموع الطلبات المسلّمة</small><strong id="statRevenue">0</strong></div>
+<div class="stat">كل الطلبات<strong id="statAll">0</strong></div>
+<div class="stat">طلبات جديدة<strong id="statNew">0</strong></div>
+<div class="stat">قيد التوصيل<strong id="statDelivery">0</strong></div>
+<div class="stat">تم التسليم<strong id="statDone">0</strong></div>
+<div class="stat">الطلبات الملغاة<strong id="statCancelled">0</strong></div>
+<div class="stat">مجموع الطلبات المسلّمة<strong id="statRevenue">0</strong></div>
 </div>
-<p class="muted">المبالغ بالدينار العراقي، والإحصائيات حسب الطلبات المحمّلة.</p>
 </div>
 
 <div class="card">
@@ -84,16 +82,17 @@ a.map-link{background:#33a6d9}
 <button onclick="showSection('ordersSection')">الطلبات</button>
 <button onclick="showSection('storesSection')">المتاجر</button>
 <button onclick="showSection('productsSection')">المنتجات</button>
+<button onclick="showSection('driversSection')">الموصّلون</button>
 </div>
 <p id="status">مرحباً بك في لوحة المدير</p>
 </div>
 
+<!-- الطلبات -->
 <section class="card" id="ordersSection">
 <h3>إدارة الطلبات</h3>
 
 <div class="filters">
 <input id="orderSearch" placeholder="ابحث بالاسم أو الهاتف أو رقم الطلب" oninput="renderOrders()">
-
 <select id="statusFilter" onchange="renderOrders()">
 <option value="">كل الحالات</option>
 <option value="بانتظار مراجعة المدير">بانتظار مراجعة المدير</option>
@@ -108,12 +107,13 @@ a.map-link{background:#33a6d9}
 <div id="orders"></div>
 </section>
 
+<!-- المتاجر -->
 <section class="card hidden" id="storesSection">
 <h3>إضافة متجر جديد</h3>
 <input id="storeName" placeholder="اسم المتجر">
 <input id="storeCategory" placeholder="تصنيف المتجر">
 <input id="storeImage" placeholder="رابط صورة المتجر اختياري">
-<input id="storeFee" type="number" min="0" step="1" placeholder="أجرة التوصيل بالدينار العراقي">
+<input id="storeFee" type="number" min="0" step="1" placeholder="أجرة التوصيل بالدينار">
 <button onclick="addStore()">إضافة المتجر</button>
 
 <div class="details">
@@ -122,6 +122,7 @@ a.map-link{background:#33a6d9}
 </div>
 </section>
 
+<!-- المنتجات -->
 <section class="card hidden" id="productsSection">
 <h3>إدارة المنتجات</h3>
 <h4>إضافة منتج</h4>
@@ -141,6 +142,33 @@ a.map-link{background:#33a6d9}
 </div>
 </section>
 
+<!-- الموصّلون -->
+<section class="card hidden" id="driversSection">
+<h3>إدارة الموصّلين</h3>
+
+<h4>إنشاء حساب موصّل جديد</h4>
+
+<input id="driverName" placeholder="اسم الموصّل">
+
+<input id="driverPhone" type="tel"
+placeholder="رقم الهاتف مثال 07XXXXXXXXX">
+
+<input id="driverPassword" type="password"
+placeholder="كلمة المرور - 8 أحرف على الأقل">
+
+<button id="createDriverButton" onclick="createDriver()">
+إنشاء حساب الموصّل
+</button>
+
+<div id="driverMessage" class="notice hidden"></div>
+
+<div class="details">
+<h3>قائمة الموصّلين</h3>
+<button onclick="loadDrivers()">تحديث قائمة الموصّلين</button>
+<div id="driversList"></div>
+</div>
+</section>
+
 <div class="card">
 <button class="cancel" onclick="logout()">تسجيل الخروج</button>
 </div>
@@ -154,8 +182,8 @@ a.map-link{background:#33a6d9}
 const SUPABASE_URL =
 "https://iombzxymujzetguqdhkq.supabase.co";
 
-// استخدم مفتاح Publishable الموجود في ملفك السابق
-// لا تستخدم مفتاح Secret أو service_role.
+// ضع مفتاح Publishable الموجود عندك في هذا المكان.
+// لا تضع مفتاح Secret أو service_role هنا.
 const SUPABASE_KEY = "sb_publishable_dTg1TjFIepJqVTycKHe42A_DW0ZwNT_";
 
 const db = supabase.createClient(
@@ -163,11 +191,12 @@ const db = supabase.createClient(
  SUPABASE_KEY.trim()
 );
 
-let allOrders = [];
-let allStores = [];
-let allProducts = [];
+let allOrders=[];
+let allStores=[];
+let allProducts=[];
+let allDrivers=[];
 
-const $ = id => document.getElementById(id);
+const $=id=>document.getElementById(id);
 
 function say(text,error=false){
  const el=$("status");
@@ -183,12 +212,6 @@ function addText(parent,label,value){
  const p=document.createElement("p");
  p.textContent=label+(value??"غير متوفر");
  parent.appendChild(p);
-}
-
-function showSection(id){
- ["ordersSection","storesSection","productsSection"].forEach(section=>{
-  $(section).classList.toggle("hidden",section!==id);
- });
 }
 
 function dateText(value){
@@ -207,7 +230,7 @@ function normalizePhone(value){
  return n.replace(/\D/g,"");
 }
 
-/* تسجيل الدخول */
+/* تسجيل دخول المدير */
 
 async function login(){
 
@@ -291,11 +314,23 @@ async function refreshAll(){
  await Promise.all([
   loadOrders(),
   loadStores(),
-  loadProducts()
+  loadProducts(),
+  loadDrivers()
  ]);
 
  updateStats();
  say("تم تحديث بيانات لوحة المدير.");
+}
+
+function showSection(id){
+ [
+  "ordersSection",
+  "storesSection",
+  "productsSection",
+  "driversSection"
+ ].forEach(section=>{
+  $(section).classList.toggle("hidden",section!==id);
+ });
 }
 
 /* الطلبات */
@@ -335,18 +370,14 @@ function updateStats(){
 
  const orders=allOrders;
 
- const isNew=o=>o.status==="بانتظار مراجعة المدير";
- const isDelivery=o=>o.status==="قيد التوصيل";
- const isDone=o=>o.status==="تم التسليم";
- const isCancelled=o=>o.status==="تم الإلغاء";
-
  $("statAll").textContent=orders.length;
- $("statNew").textContent=orders.filter(isNew).length;
- $("statDelivery").textContent=orders.filter(isDelivery).length;
- $("statDone").textContent=orders.filter(isDone).length;
- $("statCancelled").textContent=orders.filter(isCancelled).length;
+ $("statNew").textContent=orders.filter(o=>o.status==="بانتظار مراجعة المدير").length;
+ $("statDelivery").textContent=orders.filter(o=>o.status==="قيد التوصيل").length;
+ $("statDone").textContent=orders.filter(o=>o.status==="تم التسليم").length;
+ $("statCancelled").textContent=orders.filter(o=>o.status==="تم الإلغاء").length;
 
- const revenue=orders.filter(isDone)
+ const revenue=orders
+  .filter(o=>o.status==="تم التسليم")
   .reduce((sum,o)=>sum+Number(o.total||0),0);
 
  $("statRevenue").textContent=money(revenue);
@@ -374,7 +405,7 @@ function renderOrders(){
  });
 
  if(!filtered.length){
-  box.textContent="لا توجد طلبات تطابق البحث والتصنيف.";
+  box.textContent="لا توجد طلبات تطابق البحث.";
   return;
  }
 
@@ -391,7 +422,7 @@ function renderOrders(){
   addText(card,"رقم الهاتف: ",order.customer_phone);
   addText(card,"العنوان: ",order.customer_address);
 
-  // عرض موقع الزبون على Waze
+  // رابط Waze لموقع الزبون
   const lat=Number(order.customer_latitude);
   const lng=Number(order.customer_longitude);
 
@@ -421,13 +452,12 @@ function renderOrders(){
    card.appendChild(mapLink);
 
   }else{
-
    addText(card,"موقع الزبون: ","غير محدد في هذا الطلب");
   }
 
-  addText(card,"أجرة التوصيل المسجلة: ",money(order.delivery_fee));
+  addText(card,"أجرة التوصيل: ",money(order.delivery_fee));
   addText(card,"المجموع: ",money(order.total));
-  addText(card,"الحالة: ",order.status||"بانتظار مراجعة المدير");
+  addText(card,"الحالة: ",order.status);
   addText(card,"تاريخ الطلب: ",dateText(order.created_at));
 
   const phone=normalizePhone(order.customer_phone);
@@ -447,7 +477,7 @@ function renderOrders(){
    wa.href="https://wa.me/"+phone;
    wa.target="_blank";
    wa.rel="noopener";
-   wa.textContent="فتح واتساب";
+   wa.textContent="واتساب";
    contact.appendChild(wa);
   }
 
@@ -470,12 +500,10 @@ function renderOrders(){
   buttons.className="actions";
 
   actions.forEach(action=>{
-
    const btn=document.createElement("button");
    btn.textContent=action.label;
    btn.className=action.cls;
    btn.onclick=()=>changeStatus(order.id,action.value);
-
    buttons.appendChild(btn);
   });
 
@@ -496,30 +524,20 @@ function showProducts(parent,products){
  let items=products;
 
  if(typeof items==="string"){
-  try{
-   items=JSON.parse(items);
-  }catch(e){
-   items=[];
-  }
+  try{items=JSON.parse(items)}
+  catch(e){items=[]}
  }
 
  if(!Array.isArray(items)||!items.length){
-
   addText(section,"المنتجات: ","لا توجد تفاصيل");
-
  }else{
-
   items.forEach(item=>{
-
    const p=document.createElement("div");
    p.className="product";
 
    if(typeof item==="string"){
-
     p.textContent=item;
-
    }else{
-
     addText(p,"المنتج: ",item.name||"منتج");
     addText(p,"الكمية: ",item.quantity||1);
     addText(p,"السعر: ",money(item.price));
@@ -550,7 +568,7 @@ async function changeStatus(id,newStatus){
  await loadOrders();
 }
 
-/* المتاجر وأجرة التوصيل */
+/* المتاجر */
 
 async function loadStores(){
 
@@ -582,16 +600,12 @@ async function addStore(){
  }
 
  if(!Number.isSafeInteger(delivery_fee)||delivery_fee<0){
-  say("أجرة التوصيل يجب أن تكون رقماً صحيحاً موجباً أو صفراً.",true);
+  say("أجرة التوصيل غير صحيحة.",true);
   return;
  }
 
  const {error}=await db.from("stores").insert({
-  name,
-  category,
-  image,
-  delivery_fee,
-  is_active:true
+  name,category,image,delivery_fee,is_active:true
  });
 
  if(error){
@@ -604,7 +618,7 @@ async function addStore(){
  $("storeImage").value="";
  $("storeFee").value="";
 
- say("تمت إضافة المتجر وأجرة التوصيل.");
+ say("تمت إضافة المتجر.");
  await loadStores();
 }
 
@@ -625,7 +639,7 @@ function renderStores(){
 
   addText(card,"المتجر: ",store.name);
   addText(card,"التصنيف: ",store.category);
-  addText(card,"أجرة التوصيل الحالية: ",money(store.delivery_fee));
+  addText(card,"أجرة التوصيل: ",money(store.delivery_fee));
   addText(card,"الحالة: ",store.is_active?"مفتوح":"مغلق");
 
   const name=document.createElement("input");
@@ -648,7 +662,7 @@ function renderStores(){
   fee.min="0";
   fee.step="1";
   fee.value=Number(store.delivery_fee||0);
-  fee.placeholder="أجرة التوصيل بالدينار العراقي";
+  fee.placeholder="أجرة التوصيل";
   card.appendChild(fee);
 
   const save=document.createElement("button");
@@ -665,7 +679,7 @@ function renderStores(){
     !Number.isSafeInteger(delivery_fee)||
     delivery_fee<0
    ){
-    say("تأكد من الاسم والتصنيف وأجرة التوصيل.",true);
+    say("تأكد من بيانات المتجر وأجرة التوصيل.",true);
     return;
    }
 
@@ -681,7 +695,7 @@ function renderStores(){
     return;
    }
 
-   say("تم حفظ بيانات المتجر وأجرة التوصيل.");
+   say("تم حفظ بيانات المتجر.");
    await loadStores();
   };
 
@@ -711,7 +725,7 @@ function renderStores(){
  });
 }
 
-/* اختيار المتجر للمنتجات */
+/* اختيار المتجر */
 
 function fillStoreOptions(){
 
@@ -726,11 +740,9 @@ function fillStoreOptions(){
  select.appendChild(first);
 
  allStores.filter(s=>s.is_active).forEach(store=>{
-
   const option=document.createElement("option");
   option.value=store.id;
   option.textContent=store.name;
-
   select.appendChild(option);
  });
 
@@ -769,11 +781,7 @@ async function addProduct(){
  }
 
  const {error}=await db.from("products").insert({
-  name,
-  store_id,
-  price,
-  image,
-  is_active:true
+  name,store_id,price,image,is_active:true
  });
 
  if(error){
@@ -837,9 +845,7 @@ function renderProducts(){
    }
 
    const {error}=await db.from("products").update({
-    name:name.trim(),
-    price,
-    image:image.trim()
+    name:name.trim(),price,image:image.trim()
    }).eq("id",product.id);
 
    if(error){
@@ -873,6 +879,102 @@ function renderProducts(){
   };
 
   card.appendChild(toggle);
+  box.appendChild(card);
+ });
+}
+
+/* إنشاء حساب موصّل */
+
+async function createDriver(){
+
+ const full_name=$("driverName").value.trim();
+ const phone=$("driverPhone").value.trim();
+ const password=$("driverPassword").value;
+ const message=$("driverMessage");
+
+ message.classList.remove("hidden","error","success");
+
+ if(!full_name||!phone||password.length<8){
+  message.textContent="أدخل اسم الموصّل ورقم الهاتف وكلمة مرور من 8 أحرف على الأقل.";
+  message.classList.add("error");
+  return;
+ }
+
+ $("createDriverButton").disabled=true;
+ message.textContent="جاري إنشاء الحساب...";
+
+ try{
+
+  const {data,error}=await db.functions.invoke("create-driver",{
+   body:{
+    full_name,
+    phone,
+    password
+   }
+  });
+
+  if(error)throw error;
+
+  if(!data||!data.success){
+   throw new Error(data?.error||"تعذر إنشاء الحساب.");
+  }
+
+  message.textContent=
+   "تم إنشاء حساب الموصّل بنجاح: "+data.driver.phone;
+
+  message.classList.add("success");
+
+  $("driverName").value="";
+  $("driverPhone").value="";
+  $("driverPassword").value="";
+
+  await loadDrivers();
+
+ }catch(error){
+
+  message.textContent="تعذر إنشاء الحساب: "+error.message;
+  message.classList.add("error");
+
+ }finally{
+
+  $("createDriverButton").disabled=false;
+ }
+}
+
+/* عرض قائمة الموصّلين */
+
+async function loadDrivers(){
+
+ const box=$("driversList");
+ box.textContent="جاري تحميل الموصّلين...";
+
+ const {data,error}=await db
+  .from("driver_profiles")
+  .select("id,full_name,phone,created_at")
+  .order("created_at",{ascending:false});
+
+ if(error){
+  box.textContent="تعذر تحميل الموصّلين: "+error.message;
+  return;
+ }
+
+ allDrivers=data||[];
+ box.replaceChildren();
+
+ if(!allDrivers.length){
+  box.textContent="لا توجد حسابات موصّلين حالياً.";
+  return;
+ }
+
+ allDrivers.forEach(driver=>{
+
+  const card=document.createElement("div");
+  card.className="driver";
+
+  addText(card,"اسم الموصّل: ",driver.full_name);
+  addText(card,"رقم الهاتف: ",driver.phone);
+  addText(card,"تاريخ إنشاء الحساب: ",dateText(driver.created_at));
+
   box.appendChild(card);
  });
 }
