@@ -1,10 +1,10 @@
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>لوحة المدير - طلبات المدينة</title>
+
 <style>
 *{box-sizing:border-box}
 body{margin:0;font-family:Arial;background:#f3f5f8;color:#222}
@@ -37,6 +37,7 @@ button:disabled{opacity:.5}
 .muted{color:#666;font-size:13px}
 a.contact{display:inline-block;text-decoration:none;color:white;background:#245b9e;padding:9px 12px;border-radius:8px;margin:4px 2px}
 a.whatsapp{background:#16834a}
+a.map-link{background:#16834a}
 .fee-box{background:#eaf2ff;padding:10px;border-radius:8px;margin:10px 0}
 @media(max-width:480px){
 .filters{grid-template-columns:1fr}
@@ -46,6 +47,7 @@ a.whatsapp{background:#16834a}
 }
 </style>
 </head>
+
 <body>
 <header>
 <h2>طلبات المدينة</h2>
@@ -53,6 +55,7 @@ a.whatsapp{background:#16834a}
 </header>
 
 <main>
+
 <section class="card" id="loginBox">
 <h3>دخول المدير</h3>
 <input id="email" type="email" placeholder="البريد الإلكتروني" autocomplete="username">
@@ -62,6 +65,7 @@ a.whatsapp{background:#16834a}
 </section>
 
 <section id="dashboard" hidden>
+
 <div class="card">
 <h3>الإحصائيات</h3>
 <div class="stats">
@@ -86,8 +90,10 @@ a.whatsapp{background:#16834a}
 
 <section class="card" id="ordersSection">
 <h3>إدارة الطلبات</h3>
+
 <div class="filters">
 <input id="orderSearch" placeholder="ابحث بالاسم أو الهاتف أو رقم الطلب" oninput="renderOrders()">
+
 <select id="statusFilter" onchange="renderOrders()">
 <option value="">كل الحالات</option>
 <option value="بانتظار مراجعة المدير">بانتظار مراجعة المدير</option>
@@ -97,6 +103,7 @@ a.whatsapp{background:#16834a}
 <option value="تم الإلغاء">تم الإلغاء</option>
 </select>
 </div>
+
 <button onclick="loadOrders()">تحديث الطلبات</button>
 <div id="orders"></div>
 </section>
@@ -108,6 +115,7 @@ a.whatsapp{background:#16834a}
 <input id="storeImage" placeholder="رابط صورة المتجر اختياري">
 <input id="storeFee" type="number" min="0" step="1" placeholder="أجرة التوصيل بالدينار العراقي">
 <button onclick="addStore()">إضافة المتجر</button>
+
 <div class="details">
 <h3>المتاجر الموجودة</h3>
 <div id="storesList"></div>
@@ -118,12 +126,15 @@ a.whatsapp{background:#16834a}
 <h3>إدارة المنتجات</h3>
 <h4>إضافة منتج</h4>
 <input id="productName" placeholder="اسم المنتج">
+
 <select id="productStore">
 <option value="">اختر المتجر</option>
 </select>
+
 <input id="productPrice" type="number" min="0" step="1" placeholder="السعر بالدينار">
 <input id="productImage" placeholder="رابط صورة المنتج اختياري">
 <button onclick="addProduct()">إضافة المنتج</button>
+
 <div class="details">
 <h3>المنتجات الموجودة</h3>
 <div id="productsList"></div>
@@ -133,606 +144,755 @@ a.whatsapp{background:#16834a}
 <div class="card">
 <button class="cancel" onclick="logout()">تسجيل الخروج</button>
 </div>
+
 </section>
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-const SUPABASE_URL="https://iombzxymujzetguqdhkq.supabase.co";
-const SUPABASE_KEY="sb_publishable_dTg1TjFIepJqVTycKHe42A_DW0ZwNT_";
 
-const db=supabase.createClient(
-  SUPABASE_URL,
-  SUPABASE_KEY.trim()
+<script>
+const SUPABASE_URL =
+"https://iombzxymujzetguqdhkq.supabase.co";
+
+// ضع مفتاح Publishable الخاص بمشروعك هنا.
+// لا تستخدم مفتاح Secret أو service_role.
+const SUPABASE_KEY =
+"sb_publishable_dTg1TjFIepJqVTycKHe42A_DW0ZwNT_";
+
+const db = supabase.createClient(
+ SUPABASE_URL,
+ SUPABASE_KEY.trim()
 );
 
-let allOrders=[];
-let allStores=[];
-let allProducts=[];
+let allOrders = [];
+let allStores = [];
+let allProducts = [];
 
-const $=id=>document.getElementById(id);
+const $ = id => document.getElementById(id);
 
 function say(text,error=false){
-  const el=$("status");
-  el.textContent=text;
-  el.className=error?"notice error":"notice success";
+ const el=$("status");
+ el.textContent=text;
+ el.className=error?"notice error":"notice success";
 }
 
 function money(value){
-  return Number(value||0).toLocaleString("en-US")+" د.ع";
+ return Number(value||0).toLocaleString("en-US")+" د.ع";
 }
 
 function addText(parent,label,value){
-  const p=document.createElement("p");
-  p.textContent=label+(value??"غير متوفر");
-  parent.appendChild(p);
+ const p=document.createElement("p");
+ p.textContent=label+(value??"غير متوفر");
+ parent.appendChild(p);
 }
 
 function showSection(id){
-  ["ordersSection","storesSection","productsSection"].forEach(section=>{
-    $(section).classList.toggle("hidden",section!==id);
-  });
+ ["ordersSection","storesSection","productsSection"].forEach(section=>{
+  $(section).classList.toggle("hidden",section!==id);
+ });
 }
 
 function dateText(value){
-  if(!value)return "غير متوفر";
-  const d=new Date(value);
-  if(Number.isNaN(d.getTime()))return "غير متوفر";
-  return d.toLocaleString("ar-IQ");
+ if(!value)return "غير متوفر";
+ const d=new Date(value);
+ if(Number.isNaN(d.getTime()))return "غير متوفر";
+ return d.toLocaleString("ar-IQ");
 }
 
 function normalizePhone(value){
-  let n=String(value||"").replace(/[^\d+]/g,"");
-  if(n.startsWith("+"))n=n.slice(1);
-  if(n.startsWith("00"))n=n.slice(2);
-  if(n.startsWith("07"))n="964"+n.slice(1);
-  else if(n.startsWith("7"))n="964"+n;
-  return n.replace(/\D/g,"");
+ let n=String(value||"").replace(/[^\d+]/g,"");
+ if(n.startsWith("+"))n=n.slice(1);
+ if(n.startsWith("00"))n=n.slice(2);
+ if(n.startsWith("07"))n="964"+n.slice(1);
+ else if(n.startsWith("7"))n="964"+n;
+ return n.replace(/\D/g,"");
 }
 
 /* تسجيل الدخول */
+
 async function login(){
-  const email=$("email").value.trim();
-  const password=$("password").value;
-  const msg=$("loginMessage");
-  msg.classList.remove("hidden","error","success");
 
-  if(!email||!password){
-    msg.textContent="أدخل البريد الإلكتروني وكلمة المرور.";
-    msg.classList.add("error");
-    return;
+ const email=$("email").value.trim();
+ const password=$("password").value;
+ const msg=$("loginMessage");
+
+ msg.classList.remove("hidden","error","success");
+
+ if(!email||!password){
+  msg.textContent="أدخل البريد الإلكتروني وكلمة المرور.";
+  msg.classList.add("error");
+  return;
+ }
+
+ $("loginButton").disabled=true;
+ msg.textContent="جاري تسجيل الدخول...";
+
+ try{
+
+  const {data,error}=await db.auth.signInWithPassword({
+   email,password
+  });
+
+  if(error)throw error;
+
+  const {data:admin,error:adminError}=await db
+   .from("admin_users")
+   .select("user_id")
+   .eq("user_id",data.user.id)
+   .maybeSingle();
+
+  if(adminError||!admin){
+   await db.auth.signOut();
+   throw new Error("هذا الحساب ليس لديه صلاحية المدير.");
   }
 
-  $("loginButton").disabled=true;
-  msg.textContent="جاري تسجيل الدخول...";
+  $("loginBox").hidden=true;
+  $("dashboard").hidden=false;
+  $("password").value="";
 
-  try{
-    const {data,error}=await db.auth.signInWithPassword({email,password});
-    if(error)throw error;
+  await refreshAll();
+  say("تم تسجيل الدخول بنجاح.");
 
-    const {data:admin,error:adminError}=await db
-      .from("admin_users")
-      .select("user_id")
-      .eq("user_id",data.user.id)
-      .maybeSingle();
+ }catch(error){
 
-    if(adminError||!admin){
-      await db.auth.signOut();
-      throw new Error("هذا الحساب ليس لديه صلاحية المدير.");
-    }
+  msg.textContent="تعذر الدخول: "+error.message;
+  msg.classList.add("error");
 
-    $("loginBox").hidden=true;
-    $("dashboard").hidden=false;
-    $("password").value="";
-    await refreshAll();
-    say("تم تسجيل الدخول بنجاح.");
-  }catch(error){
-    msg.textContent="تعذر الدخول: "+error.message;
-    msg.classList.add("error");
-  }finally{
-    $("loginButton").disabled=false;
-  }
+ }finally{
+  $("loginButton").disabled=false;
+ }
 }
 
 async function verifySession(){
-  const {data}=await db.auth.getSession();
-  if(!data.session)return;
 
-  const user=data.session.user;
-  const {data:admin}=await db.from("admin_users")
-    .select("user_id").eq("user_id",user.id).maybeSingle();
+ const {data}=await db.auth.getSession();
+ if(!data.session)return;
 
-  if(admin){
-    $("loginBox").hidden=true;
-    $("dashboard").hidden=false;
-    await refreshAll();
-  }else{
-    await db.auth.signOut();
-  }
+ const user=data.session.user;
+
+ const {data:admin}=await db
+  .from("admin_users")
+  .select("user_id")
+  .eq("user_id",user.id)
+  .maybeSingle();
+
+ if(admin){
+  $("loginBox").hidden=true;
+  $("dashboard").hidden=false;
+  await refreshAll();
+ }else{
+  await db.auth.signOut();
+ }
 }
 
 async function refreshAll(){
-  say("جاري تحديث البيانات...");
-  await Promise.all([loadOrders(),loadStores(),loadProducts()]);
-  updateStats();
-  say("تم تحديث بيانات لوحة المدير.");
+
+ say("جاري تحديث البيانات...");
+
+ await Promise.all([
+  loadOrders(),
+  loadStores(),
+  loadProducts()
+ ]);
+
+ updateStats();
+ say("تم تحديث بيانات لوحة المدير.");
 }
 
 /* الطلبات */
+
 async function loadOrders(){
-  const {data,error}=await db.from("orders")
-    .select("id,customer_name,customer_phone,customer_address,total,delivery_fee,status,created_at,customer_notes,products")
-    .order("created_at",{ascending:false})
-    .limit(1000);
 
-  if(error){
-    say("تعذر تحميل الطلبات: "+error.message,true);
-    return;
-  }
+ const {data,error}=await db
+  .from("orders")
+  .select(`
+   id,
+   customer_name,
+   customer_phone,
+   customer_address,
+   customer_latitude,
+   customer_longitude,
+   total,
+   delivery_fee,
+   status,
+   created_at,
+   customer_notes,
+   products
+  `)
+  .order("created_at",{ascending:false})
+  .limit(1000);
 
-  allOrders=data||[];
-  renderOrders();
-  updateStats();
+ if(error){
+  say("تعذر تحميل الطلبات: "+error.message,true);
+  return;
+ }
+
+ allOrders=data||[];
+ renderOrders();
+ updateStats();
 }
 
 function updateStats(){
-  const orders=allOrders;
-  const isNew=o=>o.status==="بانتظار مراجعة المدير";
-  const isDelivery=o=>o.status==="قيد التوصيل";
-  const isDone=o=>o.status==="تم التسليم";
-  const isCancelled=o=>o.status==="تم الإلغاء";
 
-  $("statAll").textContent=orders.length;
-  $("statNew").textContent=orders.filter(isNew).length;
-  $("statDelivery").textContent=orders.filter(isDelivery).length;
-  $("statDone").textContent=orders.filter(isDone).length;
-  $("statCancelled").textContent=orders.filter(isCancelled).length;
+ const orders=allOrders;
 
-  const revenue=orders.filter(isDone)
-    .reduce((sum,o)=>sum+Number(o.total||0),0);
+ const isNew=o=>o.status==="بانتظار مراجعة المدير";
+ const isDelivery=o=>o.status==="قيد التوصيل";
+ const isDone=o=>o.status==="تم التسليم";
+ const isCancelled=o=>o.status==="تم الإلغاء";
 
-  $("statRevenue").textContent=money(revenue);
+ $("statAll").textContent=orders.length;
+ $("statNew").textContent=orders.filter(isNew).length;
+ $("statDelivery").textContent=orders.filter(isDelivery).length;
+ $("statDone").textContent=orders.filter(isDone).length;
+ $("statCancelled").textContent=orders.filter(isCancelled).length;
+
+ const revenue=orders.filter(isDone)
+  .reduce((sum,o)=>sum+Number(o.total||0),0);
+
+ $("statRevenue").textContent=money(revenue);
 }
 
 function renderOrders(){
-  const box=$("orders");
-  box.replaceChildren();
 
-  const query=$("orderSearch").value.trim().toLowerCase();
-  const filter=$("statusFilter").value;
+ const box=$("orders");
+ box.replaceChildren();
 
-  const filtered=allOrders.filter(order=>{
-    const text=[
-      order.id,order.customer_name,order.customer_phone,
-      order.customer_address
-    ].join(" ").toLowerCase();
+ const query=$("orderSearch").value.trim().toLowerCase();
+ const filter=$("statusFilter").value;
 
-    return (!query||text.includes(query))&&
-      (!filter||order.status===filter);
-  });
+ const filtered=allOrders.filter(order=>{
 
-  if(!filtered.length){
-    box.textContent="لا توجد طلبات تطابق البحث والتصنيف.";
-    return;
+  const text=[
+   order.id,
+   order.customer_name,
+   order.customer_phone,
+   order.customer_address
+  ].join(" ").toLowerCase();
+
+  return (!query||text.includes(query))&&
+   (!filter||order.status===filter);
+ });
+
+ if(!filtered.length){
+  box.textContent="لا توجد طلبات تطابق البحث والتصنيف.";
+  return;
+ }
+
+ filtered.forEach(order=>{
+
+  const card=document.createElement("div");
+  card.className="order";
+
+  const title=document.createElement("h3");
+  title.textContent="طلب رقم #"+order.id;
+  card.appendChild(title);
+
+  addText(card,"الزبون: ",order.customer_name);
+  addText(card,"رقم الهاتف: ",order.customer_phone);
+  addText(card,"العنوان: ",order.customer_address);
+
+  // عرض موقع الزبون على الخريطة
+  const lat=Number(order.customer_latitude);
+  const lng=Number(order.customer_longitude);
+
+  if(
+   order.customer_latitude!==null &&
+   order.customer_latitude!==undefined &&
+   order.customer_longitude!==null &&
+   order.customer_longitude!==undefined &&
+   Number.isFinite(lat) &&
+   Number.isFinite(lng) &&
+   lat>=-90 && lat<=90 &&
+   lng>=-180 && lng<=180
+  ){
+
+   const mapLink=document.createElement("a");
+
+   mapLink.className="contact map-link";
+   mapLink.href=
+    "https://www.google.com/maps?q="+
+    encodeURIComponent(lat+","+lng);
+
+   mapLink.target="_blank";
+   mapLink.rel="noopener";
+   mapLink.textContent="📍 فتح موقع الزبون على الخريطة";
+
+   card.appendChild(mapLink);
+
+  }else{
+
+   addText(card,"موقع الزبون: ","غير محدد في هذا الطلب");
   }
 
-  filtered.forEach(order=>{
-    const card=document.createElement("div");
-    card.className="order";
+  addText(card,"أجرة التوصيل المسجلة: ",money(order.delivery_fee));
+  addText(card,"المجموع: ",money(order.total));
+  addText(card,"الحالة: ",order.status||"بانتظار مراجعة المدير");
+  addText(card,"تاريخ الطلب: ",dateText(order.created_at));
 
-    const title=document.createElement("h3");
-    title.textContent="طلب رقم #"+order.id;
-    card.appendChild(title);
+  const phone=normalizePhone(order.customer_phone);
+  const contact=document.createElement("div");
+  contact.className="actions";
 
-    addText(card,"الزبون: ",order.customer_name);
-    addText(card,"رقم الهاتف: ",order.customer_phone);
-    addText(card,"العنوان: ",order.customer_address);
-    addText(card,"أجرة التوصيل المسجلة: ",money(order.delivery_fee));
-    addText(card,"المجموع: ",money(order.total));
-    addText(card,"الحالة: ",order.status||"بانتظار مراجعة المدير");
-    addText(card,"تاريخ الطلب: ",dateText(order.created_at));
+  if(phone){
 
-    const phone=normalizePhone(order.customer_phone);
-    const contact=document.createElement("div");
-    contact.className="actions";
+   const call=document.createElement("a");
+   call.className="contact";
+   call.href="tel:"+phone;
+   call.textContent="اتصال بالزبون";
+   contact.appendChild(call);
 
-    if(phone){
-      const call=document.createElement("a");
-      call.className="contact";
-      call.href="tel:"+phone;
-      call.textContent="اتصال بالزبون";
-      contact.appendChild(call);
+   const wa=document.createElement("a");
+   wa.className="contact whatsapp";
+   wa.href="https://wa.me/"+phone;
+   wa.target="_blank";
+   wa.rel="noopener";
+   wa.textContent="فتح واتساب";
+   contact.appendChild(wa);
+  }
 
-      const wa=document.createElement("a");
-      wa.className="contact whatsapp";
-      wa.href="https://wa.me/"+phone;
-      wa.target="_blank";
-      wa.rel="noopener";
-      wa.textContent="فتح واتساب";
-      contact.appendChild(wa);
-    }
-    card.appendChild(contact);
+  card.appendChild(contact);
 
-    showProducts(card,order.products);
+  showProducts(card,order.products);
 
-    if(order.customer_notes){
-      addText(card,"ملاحظات الزبون: ",order.customer_notes);
-    }
+  if(order.customer_notes){
+   addText(card,"ملاحظات الزبون: ",order.customer_notes);
+  }
 
-    const actions=[
-      {label:"قبول الطلب",value:"تم قبول الطلب",cls:"secondary"},
-      {label:"قيد التوصيل",value:"قيد التوصيل",cls:"delivery"},
-      {label:"تم التسليم",value:"تم التسليم",cls:"done"},
-      {label:"إلغاء الطلب",value:"تم الإلغاء",cls:"cancel"}
-    ];
+  const actions=[
+   {label:"قبول الطلب",value:"تم قبول الطلب",cls:"secondary"},
+   {label:"قيد التوصيل",value:"قيد التوصيل",cls:"delivery"},
+   {label:"تم التسليم",value:"تم التسليم",cls:"done"},
+   {label:"إلغاء الطلب",value:"تم الإلغاء",cls:"cancel"}
+  ];
 
-    const buttons=document.createElement("div");
-    buttons.className="actions";
+  const buttons=document.createElement("div");
+  buttons.className="actions";
 
-    actions.forEach(action=>{
-      const btn=document.createElement("button");
-      btn.textContent=action.label;
-      btn.className=action.cls;
-      btn.onclick=()=>changeStatus(order.id,action.value);
-      buttons.appendChild(btn);
-    });
+  actions.forEach(action=>{
 
-    card.appendChild(buttons);
-    box.appendChild(card);
+   const btn=document.createElement("button");
+   btn.textContent=action.label;
+   btn.className=action.cls;
+   btn.onclick=()=>changeStatus(order.id,action.value);
+
+   buttons.appendChild(btn);
   });
+
+  card.appendChild(buttons);
+  box.appendChild(card);
+ });
 }
 
 function showProducts(parent,products){
-  const section=document.createElement("div");
-  section.className="details";
-  const heading=document.createElement("h4");
-  heading.textContent="تفاصيل المنتجات";
-  section.appendChild(heading);
 
-  let items=products;
-  if(typeof items==="string"){
-    try{items=JSON.parse(items)}catch(e){items=[]}
-  }
+ const section=document.createElement("div");
+ section.className="details";
 
-  if(!Array.isArray(items)||!items.length){
-    addText(section,"المنتجات: ","لا توجد تفاصيل");
-  }else{
-    items.forEach(item=>{
-      const p=document.createElement("div");
-      p.className="product";
-      if(typeof item==="string"){
-        p.textContent=item;
-      }else{
-        addText(p,"المنتج: ",item.name||"منتج");
-        addText(p,"الكمية: ",item.quantity||1);
-        addText(p,"السعر: ",money(item.price));
-      }
-      section.appendChild(p);
-    });
+ const heading=document.createElement("h4");
+ heading.textContent="تفاصيل المنتجات";
+ section.appendChild(heading);
+
+ let items=products;
+
+ if(typeof items==="string"){
+  try{
+   items=JSON.parse(items);
+  }catch(e){
+   items=[];
   }
-  parent.appendChild(section);
+ }
+
+ if(!Array.isArray(items)||!items.length){
+
+  addText(section,"المنتجات: ","لا توجد تفاصيل");
+
+ }else{
+
+  items.forEach(item=>{
+
+   const p=document.createElement("div");
+   p.className="product";
+
+   if(typeof item==="string"){
+
+    p.textContent=item;
+
+   }else{
+
+    addText(p,"المنتج: ",item.name||"منتج");
+    addText(p,"الكمية: ",item.quantity||1);
+    addText(p,"السعر: ",money(item.price));
+   }
+
+   section.appendChild(p);
+  });
+ }
+
+ parent.appendChild(section);
 }
 
 async function changeStatus(id,newStatus){
-  say("جاري تحديث حالة الطلب...");
-  const {error}=await db.from("orders")
-    .update({status:newStatus}).eq("id",id);
 
-  if(error){
-    say("تعذر تحديث الحالة: "+error.message,true);
-    return;
-  }
+ say("جاري تحديث حالة الطلب...");
 
-  say("تم تحديث الطلب رقم #"+id);
-  await loadOrders();
+ const {error}=await db
+  .from("orders")
+  .update({status:newStatus})
+  .eq("id",id);
+
+ if(error){
+  say("تعذر تحديث الحالة: "+error.message,true);
+  return;
+ }
+
+ say("تم تحديث الطلب رقم #"+id);
+ await loadOrders();
 }
 
 /* المتاجر وأجرة التوصيل */
+
 async function loadStores(){
-  const {data,error}=await db.from("stores")
-    .select("id,name,category,image,is_active,delivery_fee,created_at")
-    .order("id",{ascending:false});
 
-  if(error){
-    say("تعذر تحميل المتاجر: "+error.message,true);
-    return;
-  }
+ const {data,error}=await db
+  .from("stores")
+  .select("id,name,category,image,is_active,delivery_fee,created_at")
+  .order("id",{ascending:false});
 
-  allStores=data||[];
-  renderStores();
-  fillStoreOptions();
+ if(error){
+  say("تعذر تحميل المتاجر: "+error.message,true);
+  return;
+ }
+
+ allStores=data||[];
+ renderStores();
+ fillStoreOptions();
 }
 
 async function addStore(){
-  const name=$("storeName").value.trim();
-  const category=$("storeCategory").value.trim();
-  const image=$("storeImage").value.trim();
-  const delivery_fee=Number($("storeFee").value||0);
 
-  if(!name||!category){
-    say("اكتب اسم المتجر والتصنيف.",true);
-    return;
-  }
+ const name=$("storeName").value.trim();
+ const category=$("storeCategory").value.trim();
+ const image=$("storeImage").value.trim();
+ const delivery_fee=Number($("storeFee").value||0);
 
-  if(!Number.isSafeInteger(delivery_fee)||delivery_fee<0){
-    say("أجرة التوصيل يجب أن تكون رقماً صحيحاً موجباً أو صفراً.",true);
-    return;
-  }
+ if(!name||!category){
+  say("اكتب اسم المتجر والتصنيف.",true);
+  return;
+ }
 
-  const {error}=await db.from("stores").insert({
-    name,
-    category,
-    image,
-    delivery_fee,
-    is_active:true
-  });
+ if(!Number.isSafeInteger(delivery_fee)||delivery_fee<0){
+  say("أجرة التوصيل يجب أن تكون رقماً صحيحاً موجباً أو صفراً.",true);
+  return;
+ }
 
-  if(error){
-    say("تعذر إضافة المتجر: "+error.message,true);
-    return;
-  }
+ const {error}=await db.from("stores").insert({
+  name,
+  category,
+  image,
+  delivery_fee,
+  is_active:true
+ });
 
-  $("storeName").value="";
-  $("storeCategory").value="";
-  $("storeImage").value="";
-  $("storeFee").value="";
+ if(error){
+  say("تعذر إضافة المتجر: "+error.message,true);
+  return;
+ }
 
-  say("تمت إضافة المتجر وأجرة التوصيل.");
-  await loadStores();
+ $("storeName").value="";
+ $("storeCategory").value="";
+ $("storeImage").value="";
+ $("storeFee").value="";
+
+ say("تمت إضافة المتجر وأجرة التوصيل.");
+ await loadStores();
 }
 
 function renderStores(){
-  const box=$("storesList");
-  box.replaceChildren();
 
-  if(!allStores.length){
-    box.textContent="لا توجد متاجر.";
+ const box=$("storesList");
+ box.replaceChildren();
+
+ if(!allStores.length){
+  box.textContent="لا توجد متاجر.";
+  return;
+ }
+
+ allStores.forEach(store=>{
+
+  const card=document.createElement("div");
+  card.className="store";
+
+  addText(card,"المتجر: ",store.name);
+  addText(card,"التصنيف: ",store.category);
+  addText(card,"أجرة التوصيل الحالية: ",money(store.delivery_fee));
+  addText(card,"الحالة: ",store.is_active?"مفتوح":"مغلق");
+
+  const name=document.createElement("input");
+  name.value=store.name||"";
+  name.placeholder="اسم المتجر";
+  card.appendChild(name);
+
+  const category=document.createElement("input");
+  category.value=store.category||"";
+  category.placeholder="التصنيف";
+  card.appendChild(category);
+
+  const image=document.createElement("input");
+  image.value=store.image||"";
+  image.placeholder="رابط الصورة";
+  card.appendChild(image);
+
+  const fee=document.createElement("input");
+  fee.type="number";
+  fee.min="0";
+  fee.step="1";
+  fee.value=Number(store.delivery_fee||0);
+  fee.placeholder="أجرة التوصيل بالدينار العراقي";
+  card.appendChild(fee);
+
+  const save=document.createElement("button");
+  save.className="edit";
+  save.textContent="حفظ التعديلات";
+
+  save.onclick=async()=>{
+
+   const delivery_fee=Number(fee.value);
+
+   if(
+    !name.value.trim()||
+    !category.value.trim()||
+    !Number.isSafeInteger(delivery_fee)||
+    delivery_fee<0
+   ){
+    say("تأكد من الاسم والتصنيف وأجرة التوصيل.",true);
     return;
-  }
+   }
 
-  allStores.forEach(store=>{
-    const card=document.createElement("div");
-    card.className="store";
+   const {error}=await db.from("stores").update({
+    name:name.value.trim(),
+    category:category.value.trim(),
+    image:image.value.trim(),
+    delivery_fee
+   }).eq("id",store.id);
 
-    addText(card,"المتجر: ",store.name);
-    addText(card,"التصنيف: ",store.category);
-    addText(card,"أجرة التوصيل الحالية: ",money(store.delivery_fee));
-    addText(card,"الحالة: ",store.is_active?"مفتوح":"مغلق");
+   if(error){
+    say("تعذر تعديل المتجر: "+error.message,true);
+    return;
+   }
 
-    const name=document.createElement("input");
-    name.value=store.name||"";
-    name.placeholder="اسم المتجر";
-    card.appendChild(name);
+   say("تم حفظ بيانات المتجر وأجرة التوصيل.");
+   await loadStores();
+  };
 
-    const category=document.createElement("input");
-    category.value=store.category||"";
-    category.placeholder="التصنيف";
-    card.appendChild(category);
+  card.appendChild(save);
 
-    const image=document.createElement("input");
-    image.value=store.image||"";
-    image.placeholder="رابط الصورة";
-    card.appendChild(image);
+  const toggle=document.createElement("button");
+  toggle.className=store.is_active?"cancel":"done";
+  toggle.textContent=store.is_active?"إغلاق المتجر":"فتح المتجر";
 
-    const fee=document.createElement("input");
-    fee.type="number";
-    fee.min="0";
-    fee.step="1";
-    fee.value=Number(store.delivery_fee||0);
-    fee.placeholder="أجرة التوصيل بالدينار العراقي";
-    card.appendChild(fee);
+  toggle.onclick=async()=>{
 
-    const save=document.createElement("button");
-    save.className="edit";
-    save.textContent="حفظ التعديلات";
+   const {error}=await db.from("stores")
+    .update({is_active:!store.is_active})
+    .eq("id",store.id);
 
-    save.onclick=async()=>{
-      const delivery_fee=Number(fee.value);
+   if(error){
+    say("تعذر تغيير حالة المتجر: "+error.message,true);
+    return;
+   }
 
-      if(!name.value.trim()||!category.value.trim()||
-         !Number.isSafeInteger(delivery_fee)||delivery_fee<0){
-        say("تأكد من الاسم والتصنيف وأجرة التوصيل.",true);
-        return;
-      }
+   say("تم تغيير حالة المتجر.");
+   await loadStores();
+  };
 
-      const {error}=await db.from("stores").update({
-        name:name.value.trim(),
-        category:category.value.trim(),
-        image:image.value.trim(),
-        delivery_fee
-      }).eq("id",store.id);
-
-      if(error){
-        say("تعذر تعديل المتجر: "+error.message,true);
-        return;
-      }
-
-      say("تم حفظ بيانات المتجر وأجرة التوصيل.");
-      await loadStores();
-    };
-
-    card.appendChild(save);
-
-    const toggle=document.createElement("button");
-    toggle.className=store.is_active?"cancel":"done";
-    toggle.textContent=store.is_active?"إغلاق المتجر":"فتح المتجر";
-
-    toggle.onclick=async()=>{
-      const {error}=await db.from("stores")
-        .update({is_active:!store.is_active}).eq("id",store.id);
-
-      if(error){
-        say("تعذر تغيير حالة المتجر: "+error.message,true);
-        return;
-      }
-
-      say("تم تغيير حالة المتجر.");
-      await loadStores();
-    };
-
-    card.appendChild(toggle);
-    box.appendChild(card);
-  });
+  card.appendChild(toggle);
+  box.appendChild(card);
+ });
 }
 
 /* اختيار المتجر للمنتجات */
+
 function fillStoreOptions(){
-  const select=$("productStore");
-  const selected=select.value;
-  select.replaceChildren();
 
-  const first=document.createElement("option");
-  first.value="";
-  first.textContent="اختر المتجر";
-  select.appendChild(first);
+ const select=$("productStore");
+ const selected=select.value;
 
-  allStores.filter(s=>s.is_active).forEach(store=>{
-    const option=document.createElement("option");
-    option.value=store.id;
-    option.textContent=store.name;
-    select.appendChild(option);
-  });
+ select.replaceChildren();
 
-  if(selected)select.value=selected;
+ const first=document.createElement("option");
+ first.value="";
+ first.textContent="اختر المتجر";
+ select.appendChild(first);
+
+ allStores.filter(s=>s.is_active).forEach(store=>{
+
+  const option=document.createElement("option");
+  option.value=store.id;
+  option.textContent=store.name;
+
+  select.appendChild(option);
+ });
+
+ if(selected)select.value=selected;
 }
 
 /* المنتجات */
+
 async function loadProducts(){
-  const {data,error}=await db.from("products")
-    .select("id,name,store_id,price,image,is_active,created_at")
-    .order("id",{ascending:false})
-    .limit(1000);
 
-  if(error){
-    say("تعذر تحميل المنتجات: "+error.message,true);
-    return;
-  }
+ const {data,error}=await db
+  .from("products")
+  .select("id,name,store_id,price,image,is_active,created_at")
+  .order("id",{ascending:false})
+  .limit(1000);
 
-  allProducts=data||[];
-  renderProducts();
+ if(error){
+  say("تعذر تحميل المنتجات: "+error.message,true);
+  return;
+ }
+
+ allProducts=data||[];
+ renderProducts();
 }
 
 async function addProduct(){
-  const name=$("productName").value.trim();
-  const store_id=Number($("productStore").value);
-  const price=Number($("productPrice").value);
-  const image=$("productImage").value.trim();
 
-  if(name.length<2||!store_id||!Number.isFinite(price)||price<0){
-    say("تأكد من اسم المنتج والمتجر والسعر.",true);
-    return;
-  }
+ const name=$("productName").value.trim();
+ const store_id=Number($("productStore").value);
+ const price=Number($("productPrice").value);
+ const image=$("productImage").value.trim();
 
-  const {error}=await db.from("products").insert({
-    name,store_id,price,image,is_active:true
-  });
+ if(name.length<2||!store_id||!Number.isFinite(price)||price<0){
+  say("تأكد من اسم المنتج والمتجر والسعر.",true);
+  return;
+ }
 
-  if(error){
-    say("تعذر إضافة المنتج: "+error.message,true);
-    return;
-  }
+ const {error}=await db.from("products").insert({
+  name,
+  store_id,
+  price,
+  image,
+  is_active:true
+ });
 
-  $("productName").value="";
-  $("productStore").value="";
-  $("productPrice").value="";
-  $("productImage").value="";
+ if(error){
+  say("تعذر إضافة المنتج: "+error.message,true);
+  return;
+ }
 
-  say("تمت إضافة المنتج.");
-  await loadProducts();
+ $("productName").value="";
+ $("productStore").value="";
+ $("productPrice").value="";
+ $("productImage").value="";
+
+ say("تمت إضافة المنتج.");
+ await loadProducts();
 }
 
 function renderProducts(){
-  const box=$("productsList");
-  box.replaceChildren();
 
-  if(!allProducts.length){
-    box.textContent="لا توجد منتجات.";
+ const box=$("productsList");
+ box.replaceChildren();
+
+ if(!allProducts.length){
+  box.textContent="لا توجد منتجات.";
+  return;
+ }
+
+ allProducts.forEach(product=>{
+
+  const card=document.createElement("div");
+  card.className="product";
+
+  const store=allStores.find(
+   s=>Number(s.id)===Number(product.store_id)
+  );
+
+  addText(card,"المنتج: ",product.name);
+  addText(card,"المتجر: ",store?store.name:product.store_id);
+  addText(card,"السعر: ",money(product.price));
+  addText(card,"الحالة: ",product.is_active?"نشط":"موقوف");
+
+  const edit=document.createElement("button");
+  edit.className="edit";
+  edit.textContent="تعديل الاسم والسعر والصورة";
+
+  edit.onclick=async()=>{
+
+   const name=prompt("اسم المنتج:",product.name);
+   if(name===null)return;
+
+   const priceText=prompt("السعر بالدينار:",product.price);
+   if(priceText===null)return;
+
+   const image=prompt("رابط الصورة:",product.image||"");
+   if(image===null)return;
+
+   const price=Number(priceText);
+
+   if(name.trim().length<2||!Number.isFinite(price)||price<0){
+    say("الاسم أو السعر غير صحيح.",true);
     return;
-  }
+   }
 
-  allProducts.forEach(product=>{
-    const card=document.createElement("div");
-    card.className="product";
+   const {error}=await db.from("products").update({
+    name:name.trim(),
+    price,
+    image:image.trim()
+   }).eq("id",product.id);
 
-    const store=allStores.find(s=>Number(s.id)===Number(product.store_id));
+   if(error){
+    say("تعذر تعديل المنتج: "+error.message,true);
+    return;
+   }
 
-    addText(card,"المنتج: ",product.name);
-    addText(card,"المتجر: ",store?store.name:product.store_id);
-    addText(card,"السعر: ",money(product.price));
-    addText(card,"الحالة: ",product.is_active?"نشط":"موقوف");
+   say("تم تعديل المنتج.");
+   await loadProducts();
+  };
 
-    const edit=document.createElement("button");
-    edit.className="edit";
-    edit.textContent="تعديل الاسم والسعر والصورة";
+  card.appendChild(edit);
 
-    edit.onclick=async()=>{
-      const name=prompt("اسم المنتج:",product.name);
-      if(name===null)return;
+  const toggle=document.createElement("button");
+  toggle.className=product.is_active?"cancel":"done";
+  toggle.textContent=product.is_active?"إيقاف المنتج":"تفعيل المنتج";
 
-      const priceText=prompt("السعر بالدينار:",product.price);
-      if(priceText===null)return;
+  toggle.onclick=async()=>{
 
-      const image=prompt("رابط الصورة:",product.image||"");
-      if(image===null)return;
+   const {error}=await db.from("products")
+    .update({is_active:!product.is_active})
+    .eq("id",product.id);
 
-      const price=Number(priceText);
+   if(error){
+    say("تعذر تغيير حالة المنتج: "+error.message,true);
+    return;
+   }
 
-      if(name.trim().length<2||!Number.isFinite(price)||price<0){
-        say("الاسم أو السعر غير صحيح.",true);
-        return;
-      }
+   say("تم تغيير حالة المنتج.");
+   await loadProducts();
+  };
 
-      const {error}=await db.from("products").update({
-        name:name.trim(),
-        price,
-        image:image.trim()
-      }).eq("id",product.id);
-
-      if(error){
-        say("تعذر تعديل المنتج: "+error.message,true);
-        return;
-      }
-
-      say("تم تعديل المنتج.");
-      await loadProducts();
-    };
-
-    card.appendChild(edit);
-
-    const toggle=document.createElement("button");
-    toggle.className=product.is_active?"cancel":"done";
-    toggle.textContent=product.is_active?"إيقاف المنتج":"تفعيل المنتج";
-
-    toggle.onclick=async()=>{
-      const {error}=await db.from("products")
-        .update({is_active:!product.is_active}).eq("id",product.id);
-
-      if(error){
-        say("تعذر تغيير حالة المنتج: "+error.message,true);
-        return;
-      }
-
-      say("تم تغيير حالة المنتج.");
-      await loadProducts();
-    };
-
-    card.appendChild(toggle);
-    box.appendChild(card);
-  });
+  card.appendChild(toggle);
+  box.appendChild(card);
+ });
 }
 
 /* تسجيل الخروج */
+
 async function logout(){
-  await db.auth.signOut();
-  $("dashboard").hidden=true;
-  $("loginBox").hidden=false;
-  $("password").value="";
-  $("loginMessage").textContent="تم تسجيل الخروج.";
-  $("loginMessage").classList.remove("hidden");
+
+ await db.auth.signOut();
+
+ $("dashboard").hidden=true;
+ $("loginBox").hidden=false;
+ $("password").value="";
+
+ $("loginMessage").textContent="تم تسجيل الخروج.";
+ $("loginMessage").classList.remove("hidden");
 }
 
 verifySession();
 </script>
+
 </body>
 </html>
-<!
