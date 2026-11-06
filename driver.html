@@ -6,7 +6,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>حساب الموصّل - طلبات المدينة</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
 <style>
 *{box-sizing:border-box}
 body{margin:0;background:#f3f5f8;font-family:Arial;color:#222}
@@ -22,25 +21,21 @@ button{width:100%}
 .waze{background:#1769aa}
 h3{margin-top:0;color:#102a43}
 .small{color:#666;font-size:13px}
-.hidden{display:none}
+.hidden{display:none!important}
 .error{color:#c0392b;white-space:pre-wrap}
 </style>
 </head>
-
 <body>
-
 <header>
 <h2>طلبات المدينة 🛵</h2>
 <div>بوابة الموصّلين</div>
 </header>
-
 <main>
-
 <section class="box" id="loginBox">
 <h3>دخول الموصّل</h3>
-<input id="phone" type="tel" placeholder="رقم الهاتف">
+<input id="phone" type="tel" placeholder="رقم الهاتف 07XXXXXXXXX">
 <input id="password" type="password" placeholder="كلمة المرور">
-<button onclick="login()">تسجيل الدخول</button>
+<button id="loginButton" onclick="login()">تسجيل الدخول</button>
 <p id="loginMessage"></p>
 </section>
 
@@ -53,233 +48,203 @@ h3{margin-top:0;color:#102a43}
 </div>
 <div id="orders"></div>
 </section>
-
 </main>
 
 <script>
 const SUPABASE_URL =
 "https://iombzxymujzetguqdhkq.supabase.co";
 
-// أبقِ مفتاح Publishable الموجود عندك هنا
+// استخدم نفس مفتاح Publishable الموجود في ملفك السابق
 const SUPABASE_KEY = "sb_publishable_dTg1TjFIepJqVTycKHe42A_DW0ZwNT_";
 
 const db = window.supabase.createClient(
-SUPABASE_URL,
-SUPABASE_KEY
+  SUPABASE_URL,
+  SUPABASE_KEY
 );
 
 function normalizePhone(value){
- let p=value.replace(/[^\d+]/g,"");
+  let p=String(value||"").replace(/\D/g,"");
 
- if(p.startsWith("00")) p="+"+p.slice(2);
- else if(p.startsWith("07")) p="+964"+p.slice(1);
- else if(p.startsWith("7")) p="+964"+p;
- else if(p.startsWith("964")) p="+"+p;
+  if(p.startsWith("00")) p=p.slice(2);
+  if(p.startsWith("07")) p="964"+p.slice(1);
+  else if(p.startsWith("7")) p="964"+p;
 
- return p;
+  return p;
 }
 
 async function login(){
- const phone=normalizePhone(
- document.getElementById("phone").value
- );
+  const phone=normalizePhone(
+    document.getElementById("phone").value
+  );
+  const password=document.getElementById("password").value;
+  const message=document.getElementById("loginMessage");
+  const button=document.getElementById("loginButton");
 
- const password=document.getElementById("password").value;
- const message=document.getElementById("loginMessage");
+  if(!/^9647\d{9}$/.test(phone)||!password){
+    message.textContent="أدخل رقم هاتف عراقي صحيح وكلمة المرور.";
+    return;
+  }
 
- if(!phone || !password){
-  message.textContent="أدخل رقم الهاتف وكلمة المرور";
-  return;
- }
+  const internalEmail =
+    phone + "@drivers.talabat-almadina.invalid";
 
- message.textContent="جارٍ تسجيل الدخول...";
+  button.disabled=true;
+  message.textContent="جارٍ تسجيل الدخول...";
 
- const {data,error}=await db.auth.signInWithPassword({
-  phone:phone,
-  password:password
- });
+  try{
+    const {error}=await db.auth.signInWithPassword({
+      email:internalEmail,
+      password:password
+    });
 
- if(error){
-  message.textContent="تعذر تسجيل الدخول: "+error.message;
-  return;
- }
+    if(error) throw error;
 
- await showDriver();
+    await showDriver();
+
+  }catch(error){
+    message.textContent="تعذر تسجيل الدخول: "+error.message;
+  }finally{
+    button.disabled=false;
+  }
 }
 
 async function showDriver(){
+  const {data:{user},error:userError}=await db.auth.getUser();
 
- const {data:{user},error:userError}=await db.auth.getUser();
+  if(userError||!user){
+    showError("تعذر التحقق من الحساب",userError);
+    return;
+  }
 
- if(userError || !user){
-  showError("تعذر التحقق من حساب الموصّل",userError);
-  return;
- }
+  const {data:profile,error}=await db
+    .from("driver_profiles")
+    .select("full_name,phone")
+    .eq("id",user.id)
+    .maybeSingle();
 
- const {data:profile,error}=await db
- .from("driver_profiles")
- .select("full_name,phone")
- .eq("id",user.id)
- .maybeSingle();
+  if(error){
+    showError("تعذر قراءة بيانات الموصّل",error);
+    return;
+  }
 
- if(error){
-  showError("تعذر قراءة بيانات الموصّل",error);
-  return;
- }
+  if(!profile){
+    alert("لم يتم العثور على بيانات هذا الموصّل.");
+    return;
+  }
 
- if(!profile){
-  alert("لم يتم العثور على بيانات هذا الموصّل في جدول driver_profiles");
-  return;
- }
+  document.getElementById("driverName").textContent =
+    "أهلاً "+profile.full_name;
 
- document.getElementById("driverName").textContent=
- "أهلاً "+profile.full_name;
+  document.getElementById("loginBox").classList.add("hidden");
+  document.getElementById("driverArea").classList.remove("hidden");
 
- document.getElementById("loginBox").classList.add("hidden");
- document.getElementById("driverArea").classList.remove("hidden");
-
- await loadOrders();
+  await loadOrders();
 }
 
 function showError(title,error){
- alert(
-  title+
-  "\nرمز الخطأ: "+(error?.code||"غير متوفر")+
-  "\nالتفاصيل: "+(error?.message||"غير متوفرة")+
-  "\nالسبب: "+(error?.details||"غير متوفر")
- );
+  alert(
+    title+
+    "\nرمز الخطأ: "+(error?.code||"غير متوفر")+
+    "\nالتفاصيل: "+(error?.message||"غير متوفرة")
+  );
 }
 
 async function loadOrders(){
+  const area=document.getElementById("orders");
+  area.textContent="جارٍ تحميل الطلبات...";
 
- const area=document.getElementById("orders");
- area.innerHTML="<div class='box'>جارٍ تحميل الطلبات...</div>";
+  const {data:{user},error:userError}=await db.auth.getUser();
 
- const {data:{user},error:userError}=await db.auth.getUser();
+  if(userError||!user){
+    area.textContent="يجب تسجيل الدخول أولاً.";
+    return;
+  }
 
- if(userError || !user){
-  area.innerHTML="<div class='box error'>يجب تسجيل الدخول أولاً</div>";
-  return;
- }
+  const {data,error}=await db
+    .from("orders")
+    .select("*")
+    .eq("driver_id",user.id)
+    .order("created_at",{ascending:false});
 
- const {data,error}=await db
- .from("orders")
- .select("*")
- .eq("driver_id",user.id)
- .order("created_at",{ascending:false});
+  if(error){
+    area.textContent="تعذر تحميل الطلبات: "+error.message;
+    return;
+  }
 
- if(error){
-  area.innerHTML="<div class='box error'>تعذر تحميل الطلبات: "+
-  escapeHTML(error.message)+"</div>";
-  return;
- }
+  if(!data||data.length===0){
+    area.textContent="ما عندك طلبات مسندة حالياً.";
+    return;
+  }
 
- if(!data || data.length===0){
-  area.innerHTML="<div class='box'>ما عندك طلبات مسندة حالياً.</div>";
-  return;
- }
+  area.innerHTML=data.map(order=>{
+    const products=Array.isArray(order.products)
+      ? order.products.map(p=>
+          typeof p==="string"?p:(p.name||p.title||"منتج")
+        ).join("، ")
+      : "تفاصيل المنتجات";
 
- area.innerHTML=data.map(order=>{
+    const phone=String(order.customer_phone||"")
+      .replace(/\D/g,"");
 
-  const products=Array.isArray(order.products)
-   ? order.products.map(p=>{
-      if(typeof p==="string") return p;
-      return p.name || p.title || "منتج";
-     }).join("، ")
-   : (typeof order.products==="string"
-      ? order.products : "تفاصيل المنتجات");
+    const whatsapp=phone.startsWith("0")
+      ? "964"+phone.slice(1)
+      : phone.startsWith("964")?phone:"";
 
-  const phone=String(order.customer_phone||"")
-   .replace(/[^\d+]/g,"");
+    const hasLocation=
+      order.customer_latitude!=null &&
+      order.customer_longitude!=null;
 
-  const whatsapp=phone.startsWith("0")
-   ? "964"+phone.slice(1)
-   : phone.replace("+","");
+    const waze=hasLocation
+      ? "https://waze.com/ul?ll="+
+        encodeURIComponent(
+          order.customer_latitude+","+order.customer_longitude
+        )+"&navigate=yes"
+      : "";
 
-  const hasLocation=
-   order.customer_latitude!=null &&
-   order.customer_longitude!=null;
+    return `
+      <div class="order">
+        <h3>طلب رقم: ${escapeHTML(order.id)}</h3>
+        <p><b>الزبون:</b> ${escapeHTML(order.customer_name||"غير محدد")}</p>
+        <p><b>الهاتف:</b> ${escapeHTML(order.customer_phone||"غير محدد")}</p>
+        <p><b>العنوان:</b> ${escapeHTML(order.customer_address||"غير محدد")}</p>
+        <p><b>المنتجات:</b> ${escapeHTML(products)}</p>
+        <p><b>المجموع:</b> ${escapeHTML(order.total??0)} د.ع</p>
+        <p><b>أجرة التوصيل:</b> ${escapeHTML(order.delivery_fee??0)} د.ع</p>
+        <p><b>الحالة:</b> ${escapeHTML(order.status||"غير محددة")}</p>
 
-  const waze=hasLocation
-   ? "https://waze.com/ul?ll="+
-     encodeURIComponent(
-      order.customer_latitude+","+order.customer_longitude
-     )+"&navigate=yes"
-   : "";
+        ${phone?`<a class="link contact" href="tel:${encodeURIComponent(phone)}">اتصال بالزبون</a>`:""}
 
-  return `
-   <div class="order">
+        ${whatsapp?`<a class="link whatsapp" target="_blank" rel="noopener" href="https://wa.me/${whatsapp}">مراسلة واتساب</a>`:""}
 
-    <h3>طلب رقم: ${escapeHTML(String(order.id))}</h3>
+        ${waze?`<a class="link waze" target="_blank" rel="noopener" href="${waze}">فتح موقع الزبون في Waze</a>`:"<p class='small'>موقع الزبون غير متوفر</p>"}
 
-    <p><b>الزبون:</b>
-    ${escapeHTML(order.customer_name||"غير محدد")}</p>
-
-    <p><b>الهاتف:</b>
-    ${escapeHTML(order.customer_phone||"غير محدد")}</p>
-
-    <p><b>العنوان:</b>
-    ${escapeHTML(order.customer_address||"غير محدد")}</p>
-
-    <p><b>المنتجات:</b>
-    ${escapeHTML(products)}</p>
-
-    <p><b>المجموع:</b>
-    ${escapeHTML(String(order.total??0))} د.ع</p>
-
-    <p><b>أجرة التوصيل:</b>
-    ${escapeHTML(String(order.delivery_fee??0))} د.ع</p>
-
-    <p><b>الحالة:</b>
-    ${escapeHTML(order.status||"غير محددة")}</p>
-
-    ${phone
-    ? `<a class="link contact" href="tel:${encodeURIComponent(phone)}">اتصال بالزبون</a>`
-    : ""}
-
-    ${whatsapp
-    ? `<a class="link whatsapp" target="_blank" rel="noopener" href="https://wa.me/${encodeURIComponent(whatsapp)}">مراسلة واتساب</a>`
-    : ""}
-
-    ${waze
-    ? `<a class="link waze" target="_blank" rel="noopener" href="${waze}">فتح موقع الزبون في Waze</a>`
-    : "<p class='small'>موقع الزبون غير متوفر</p>"}
-
-    ${order.customer_notes
-    ? `<p><b>ملاحظات:</b> ${escapeHTML(order.customer_notes)}</p>`
-    : ""}
-
-   </div>
-  `;
-
- }).join("");
+        ${order.customer_notes?`<p><b>ملاحظات:</b> ${escapeHTML(order.customer_notes)}</p>`:""}
+      </div>
+    `;
+  }).join("");
 }
 
 function escapeHTML(value){
- return String(value).replace(/[&<>"']/g,c=>({
-  "&":"&amp;",
-  "<":"&lt;",
-  ">":"&gt;",
-  '"':"&quot;",
-  "'":"&#39;"
- }[c]));
+  return String(value).replace(/[&<>"']/g,c=>({
+    "&":"&amp;",
+    "<":"&lt;",
+    ">":"&gt;",
+    '"':"&quot;",
+    "'":"&#39;"
+  }[c]));
 }
 
 async function logout(){
- await db.auth.signOut();
- location.reload();
+  await db.auth.signOut();
+  location.reload();
 }
 
 async function checkSession(){
- const {data:{session}}=await db.auth.getSession();
-
- if(session){
-  await showDriver();
- }
+  const {data:{session}}=await db.auth.getSession();
+  if(session) await showDriver();
 }
 
 checkSession();
 </script>
-
 </body>
 </html>
