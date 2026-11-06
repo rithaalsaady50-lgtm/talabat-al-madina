@@ -32,6 +32,7 @@ textarea{min-height:80px}
 .success{color:#16834a}
 .error{color:#b42318}
 .fee-row{margin-top:12px;padding-top:10px;border-top:1px dashed #ccc}
+.track-link{display:block;background:#102a43;color:white;padding:12px;border-radius:8px;text-decoration:none;margin-top:12px}
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -320,11 +321,16 @@ document.getElementById("orderForm")
 
  event.preventDefault();
 
- resultArea.textContent = "";
+ resultArea.replaceChildren();
  resultArea.className = "";
 
  if(cart.length === 0){
   alert("أضف منتجاً واحداً على الأقل إلى السلة.");
+  return;
+ }
+
+ if(!storeId || !Number.isInteger(storeId)){
+  alert("رقم المتجر غير صحيح.");
   return;
  }
 
@@ -346,7 +352,7 @@ document.getElementById("orderForm")
  }
 
  submitButton.disabled = true;
- submitButton.textContent = "جاري التحقق من المنتجات...";
+ submitButton.textContent = "جاري التحقق من الطلب...";
 
  try{
 
@@ -366,7 +372,7 @@ document.getElementById("orderForm")
   const currentDeliveryFee = Number(store.delivery_fee || 0);
 
   if(!Number.isFinite(currentDeliveryFee) || currentDeliveryFee < 0){
-   throw new Error("أجرة التوصيل غير صحيحة. يرجى مراجعة المدير.");
+   throw new Error("أجرة التوصيل غير صحيحة.");
   }
 
   const {data:activeProducts,error:checkError} = await db
@@ -407,9 +413,13 @@ document.getElementById("orderForm")
   const verifiedFinalTotal =
    verifiedProductsTotal + currentDeliveryFee;
 
+  // إنشاء رقم متابعة خاص بهذا الطلب
+  const trackingToken = crypto.randomUUID();
+
   submitButton.textContent = "جاري إرسال الطلب...";
 
   const order = {
+   tracking_token:trackingToken,
    customer_name:customerName,
    customer_phone:customerPhone,
    customer_address:customerAddress,
@@ -427,12 +437,59 @@ document.getElementById("orderForm")
 
   if(error) throw error;
 
+  // إنشاء رابط متابعة الطلب
+  const trackingUrl = new URL(
+   "track.html",
+   location.href
+  );
+
+  trackingUrl.searchParams.set("token",trackingToken);
+
   resultArea.className = "message success";
-  resultArea.textContent =
-   "تم إرسال الطلب بنجاح.\n" +
-   "مجموع المنتجات: " + money(verifiedProductsTotal) + "\n" +
-   "أجرة التوصيل: " + money(currentDeliveryFee) + "\n" +
-   "المجموع النهائي: " + money(verifiedFinalTotal);
+
+  const successText = document.createElement("p");
+  successText.textContent =
+   "تم إرسال الطلب بنجاح!";
+
+  const tokenText = document.createElement("p");
+  tokenText.textContent =
+   "رقم متابعة طلبك: " + trackingToken;
+
+  const amountText = document.createElement("p");
+  amountText.textContent =
+   "مجموع المنتجات: " + money(verifiedProductsTotal) +
+   "\nأجرة التوصيل: " + money(currentDeliveryFee) +
+   "\nالمجموع النهائي: " + money(verifiedFinalTotal);
+
+  const link = document.createElement("a");
+  link.className = "track-link";
+  link.href = trackingUrl.href;
+  link.textContent = "متابعة حالة الطلب";
+
+  link.target = "_blank";
+  link.rel = "noopener";
+
+  const copyButton = document.createElement("button");
+  copyButton.type = "button";
+  copyButton.style.marginTop = "10px";
+  copyButton.textContent = "نسخ رقم المتابعة";
+
+  copyButton.onclick = async ()=>{
+   try{
+    await navigator.clipboard.writeText(trackingToken);
+    copyButton.textContent = "تم نسخ رقم المتابعة";
+   }catch(error){
+    copyButton.textContent = "انسخ الرقم يدوياً من الأعلى";
+   }
+  };
+
+  resultArea.append(
+   successText,
+   tokenText,
+   amountText,
+   link,
+   copyButton
+  );
 
   cart = [];
   showCart();
