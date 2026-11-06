@@ -15,6 +15,7 @@ header{background:#102a43;color:white;text-align:center;padding:18px}
 input,button{width:100%;padding:13px;margin:7px 0;border-radius:8px;font-size:16px}
 input{border:1px solid #ccc}
 button{border:0;background:#16834a;color:white;cursor:pointer}
+button:disabled{opacity:.5}
 button.dark{background:#102a43}
 button.red{background:#c0392b}
 .order-title{font-weight:bold;color:#102a43;font-size:18px}
@@ -23,6 +24,9 @@ button.red{background:#c0392b}
 .actions a{display:block;text-align:center;padding:12px;border-radius:8px;color:white;text-decoration:none;background:#16834a}
 .actions a.blue{background:#1769aa}
 .actions a.orange{background:#d97706}
+.status-buttons{display:grid;gap:7px;margin-top:12px}
+.status-buttons button{margin:0}
+.status-current{background:#eef5f0;padding:10px;border-radius:8px;margin-top:10px}
 .hidden{display:none}
 #message{padding:10px;color:#c0392b;text-align:center;overflow-wrap:anywhere}
 </style>
@@ -60,7 +64,6 @@ button.red{background:#c0392b}
 const SUPABASE_URL =
 "https://iombzxymujzetguqdhkq.supabase.co";
 
-// ضع المفتاح العام الحقيقي هنا فقط
 const SUPABASE_ANON_KEY =
 "sb_publishable_dTg1TjFIepJqVTycKHe42A_DW0ZwNT_";
 
@@ -91,18 +94,13 @@ let currentDriver = null;
 function initialize(){
   const key = SUPABASE_ANON_KEY.trim();
 
-  if(key === "ضع_المفتاح_العام_هنا" || !key){
-    showMessage("أدخل مفتاح Supabase العام داخل الكود");
-    return false;
-  }
-
-  if(/[^\x00-\x7F]/.test(key)){
-    showMessage("المفتاح يحتوي على أحرف غير مقبولة. انسخه مجدداً من Supabase.");
+  if(!key || /[^\x00-\x7F]/.test(key)){
+    showMessage("مفتاح الاتصال غير صحيح");
     return false;
   }
 
   if(!window.supabase){
-    showMessage("تعذر تحميل مكتبة الاتصال. حدّث الصفحة.");
+    showMessage("تعذر تحميل مكتبة الاتصال");
     return false;
   }
 
@@ -181,6 +179,59 @@ async function login(){
   }
 }
 
+async function updateOrderStatus(orderId,status,button){
+  if(!currentDriver) return;
+
+  const allowedStatuses = [
+    "تم استلام الطلب",
+    "بالطريق إلى الزبون",
+    "تم توصيل الطلب"
+  ];
+
+  if(!allowedStatuses.includes(status)){
+    alert("حالة الطلب غير مسموحة");
+    return;
+  }
+
+  if(!confirm("هل تريد تغيير حالة الطلب إلى: " + status + "؟")){
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = "جارٍ التحديث...";
+
+  try{
+    const {data,error} = await db
+      .from("orders")
+      .update({status:status})
+      .eq("id",orderId)
+      .eq("driver_id",currentDriver.id)
+      .select("id");
+
+    if(error){
+      alert("تعذر تحديث الحالة: " + error.message);
+      button.disabled = false;
+      button.textContent = status;
+      return;
+    }
+
+    if(!data || data.length === 0){
+      alert("لم يتم تحديث الطلب. تأكد من تعيينه لحسابك.");
+      button.disabled = false;
+      button.textContent = status;
+      return;
+    }
+
+    alert("تم تحديث حالة الطلب بنجاح");
+    await loadOrders();
+
+  }catch(error){
+    alert("خطأ: " + error.message);
+    button.disabled = false;
+    button.textContent = status;
+  }
+}
+
 async function loadOrders(){
   if(!currentDriver) return;
 
@@ -224,23 +275,50 @@ async function loadOrders(){
         ? "https://wa.me/" + normalizePhone(phone)
         : "";
 
+      const orderId = Number(order.id);
+
+      const statuses = [
+        "تم استلام الطلب",
+        "بالطريق إلى الزبون",
+        "تم توصيل الطلب"
+      ];
+
+      const statusButtons = statuses.map(status => `
+        <button
+          type="button"
+          onclick="updateOrderStatus(${orderId},'${status}',this)"
+          ${order.status === status ? "disabled" : ""}
+        >${order.status === status ? "✓ " : ""}${status}</button>
+      `).join("");
+
       return `
         <div class="card">
           <div class="order-title">
             طلب رقم: ${escapeHTML(order.id)}
           </div>
+
           <div class="info">
             <b>اسم الزبون:</b> ${escapeHTML(name)}<br>
             <b>رقم الهاتف:</b> ${escapeHTML(phone || "غير متوفر")}<br>
             <b>العنوان:</b> ${escapeHTML(address)}<br>
             <b>المبلغ:</b> ${escapeHTML(order.total ?? "غير محدد")} د.ع<br>
-            <b>الحالة:</b> ${escapeHTML(order.status || "غير محدد")}<br>
             <b>التاريخ:</b> ${escapeHTML(
               order.created_at
                 ? new Date(order.created_at).toLocaleString("ar-IQ")
                 : "غير متوفر"
             )}
           </div>
+
+          <div class="status-current">
+            <b>حالة الطلب الحالية:</b>
+            ${escapeHTML(order.status || "غير محدد")}
+          </div>
+
+          <h4>تغيير حالة الطلب</h4>
+          <div class="status-buttons">
+            ${statusButtons}
+          </div>
+
           <div class="actions">
             ${phone ? `<a href="tel:${encodeURIComponent(phone)}">📞 اتصال</a>` : ""}
             ${whatsapp ? `<a class="blue" href="${whatsapp}" target="_blank" rel="noopener">واتساب</a>` : ""}
