@@ -37,7 +37,13 @@ button:disabled{opacity:.5}
 .muted{color:#666;font-size:13px}
 a.contact{display:inline-block;text-decoration:none;color:white;background:#245b9e;padding:9px 12px;border-radius:8px;margin:4px 2px}
 a.whatsapp{background:#16834a}
-@media(max-width:480px){.filters{grid-template-columns:1fr}.stats{gap:7px}.stat{padding:10px}.stat strong{font-size:19px}}
+.fee-box{background:#eaf2ff;padding:10px;border-radius:8px;margin:10px 0}
+@media(max-width:480px){
+.filters{grid-template-columns:1fr}
+.stats{gap:7px}
+.stat{padding:10px}
+.stat strong{font-size:19px}
+}
 </style>
 </head>
 <body>
@@ -100,6 +106,7 @@ a.whatsapp{background:#16834a}
 <input id="storeName" placeholder="اسم المتجر">
 <input id="storeCategory" placeholder="تصنيف المتجر">
 <input id="storeImage" placeholder="رابط صورة المتجر اختياري">
+<input id="storeFee" type="number" min="0" step="1" placeholder="أجرة التوصيل بالدينار العراقي">
 <button onclick="addStore()">إضافة المتجر</button>
 <div class="details">
 <h3>المتاجر الموجودة</h3>
@@ -132,11 +139,12 @@ a.whatsapp{background:#16834a}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const SUPABASE_URL="https://iombzxymujzetguqdhkq.supabase.co";
-
-/* sb_publishable_dTg1TjFIepJqVTycKHe42A_DW0ZwNT_. */
 const SUPABASE_KEY="sb_publishable_dTg1TjFIepJqVTycKHe42A_DW0ZwNT_";
 
-const db=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const db=supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY.trim()
+);
 
 let allOrders=[];
 let allStores=[];
@@ -149,25 +157,30 @@ function say(text,error=false){
   el.textContent=text;
   el.className=error?"notice error":"notice success";
 }
+
 function money(value){
   return Number(value||0).toLocaleString("en-US")+" د.ع";
 }
+
 function addText(parent,label,value){
   const p=document.createElement("p");
   p.textContent=label+(value??"غير متوفر");
   parent.appendChild(p);
 }
+
 function showSection(id){
   ["ordersSection","storesSection","productsSection"].forEach(section=>{
     $(section).classList.toggle("hidden",section!==id);
   });
 }
+
 function dateText(value){
   if(!value)return "غير متوفر";
   const d=new Date(value);
   if(Number.isNaN(d.getTime()))return "غير متوفر";
   return d.toLocaleString("ar-IQ");
 }
+
 function normalizePhone(value){
   let n=String(value||"").replace(/[^\d+]/g,"");
   if(n.startsWith("+"))n=n.slice(1);
@@ -177,6 +190,7 @@ function normalizePhone(value){
   return n.replace(/\D/g,"");
 }
 
+/* تسجيل الدخول */
 async function login(){
   const email=$("email").value.trim();
   const password=$("password").value;
@@ -247,7 +261,7 @@ async function refreshAll(){
 /* الطلبات */
 async function loadOrders(){
   const {data,error}=await db.from("orders")
-    .select("id,customer_name,customer_phone,customer_address,total,status,created_at,customer_notes,products")
+    .select("id,customer_name,customer_phone,customer_address,total,delivery_fee,status,created_at,customer_notes,products")
     .order("created_at",{ascending:false})
     .limit(1000);
 
@@ -255,6 +269,7 @@ async function loadOrders(){
     say("تعذر تحميل الطلبات: "+error.message,true);
     return;
   }
+
   allOrders=data||[];
   renderOrders();
   updateStats();
@@ -275,6 +290,7 @@ function updateStats(){
 
   const revenue=orders.filter(isDone)
     .reduce((sum,o)=>sum+Number(o.total||0),0);
+
   $("statRevenue").textContent=money(revenue);
 }
 
@@ -311,6 +327,7 @@ function renderOrders(){
     addText(card,"الزبون: ",order.customer_name);
     addText(card,"رقم الهاتف: ",order.customer_phone);
     addText(card,"العنوان: ",order.customer_address);
+    addText(card,"أجرة التوصيل المسجلة: ",money(order.delivery_fee));
     addText(card,"المجموع: ",money(order.total));
     addText(card,"الحالة: ",order.status||"بانتظار مراجعة المدير");
     addText(card,"تاريخ الطلب: ",dateText(order.created_at));
@@ -405,20 +422,22 @@ async function changeStatus(id,newStatus){
     say("تعذر تحديث الحالة: "+error.message,true);
     return;
   }
+
   say("تم تحديث الطلب رقم #"+id);
   await loadOrders();
 }
 
-/* المتاجر */
+/* المتاجر وأجرة التوصيل */
 async function loadStores(){
   const {data,error}=await db.from("stores")
-    .select("id,name,category,image,is_active,created_at")
+    .select("id,name,category,image,is_active,delivery_fee,created_at")
     .order("id",{ascending:false});
 
   if(error){
     say("تعذر تحميل المتاجر: "+error.message,true);
     return;
   }
+
   allStores=data||[];
   renderStores();
   fillStoreOptions();
@@ -428,14 +447,24 @@ async function addStore(){
   const name=$("storeName").value.trim();
   const category=$("storeCategory").value.trim();
   const image=$("storeImage").value.trim();
+  const delivery_fee=Number($("storeFee").value||0);
 
   if(!name||!category){
     say("اكتب اسم المتجر والتصنيف.",true);
     return;
   }
 
+  if(!Number.isSafeInteger(delivery_fee)||delivery_fee<0){
+    say("أجرة التوصيل يجب أن تكون رقماً صحيحاً موجباً أو صفراً.",true);
+    return;
+  }
+
   const {error}=await db.from("stores").insert({
-    name,category,image,is_active:true
+    name,
+    category,
+    image,
+    delivery_fee,
+    is_active:true
   });
 
   if(error){
@@ -446,7 +475,9 @@ async function addStore(){
   $("storeName").value="";
   $("storeCategory").value="";
   $("storeImage").value="";
-  say("تمت إضافة المتجر.");
+  $("storeFee").value="";
+
+  say("تمت إضافة المتجر وأجرة التوصيل.");
   await loadStores();
 }
 
@@ -462,8 +493,10 @@ function renderStores(){
   allStores.forEach(store=>{
     const card=document.createElement("div");
     card.className="store";
+
     addText(card,"المتجر: ",store.name);
     addText(card,"التصنيف: ",store.category);
+    addText(card,"أجرة التوصيل الحالية: ",money(store.delivery_fee));
     addText(card,"الحالة: ",store.is_active?"مفتوح":"مغلق");
 
     const name=document.createElement("input");
@@ -481,38 +514,68 @@ function renderStores(){
     image.placeholder="رابط الصورة";
     card.appendChild(image);
 
+    const fee=document.createElement("input");
+    fee.type="number";
+    fee.min="0";
+    fee.step="1";
+    fee.value=Number(store.delivery_fee||0);
+    fee.placeholder="أجرة التوصيل بالدينار العراقي";
+    card.appendChild(fee);
+
     const save=document.createElement("button");
     save.className="edit";
     save.textContent="حفظ التعديلات";
+
     save.onclick=async()=>{
+      const delivery_fee=Number(fee.value);
+
+      if(!name.value.trim()||!category.value.trim()||
+         !Number.isSafeInteger(delivery_fee)||delivery_fee<0){
+        say("تأكد من الاسم والتصنيف وأجرة التوصيل.",true);
+        return;
+      }
+
       const {error}=await db.from("stores").update({
         name:name.value.trim(),
         category:category.value.trim(),
-        image:image.value.trim()
+        image:image.value.trim(),
+        delivery_fee
       }).eq("id",store.id);
 
-      if(error){say("تعذر تعديل المتجر: "+error.message,true);return;}
-      say("تم تعديل المتجر.");
+      if(error){
+        say("تعذر تعديل المتجر: "+error.message,true);
+        return;
+      }
+
+      say("تم حفظ بيانات المتجر وأجرة التوصيل.");
       await loadStores();
     };
+
     card.appendChild(save);
 
     const toggle=document.createElement("button");
     toggle.className=store.is_active?"cancel":"done";
     toggle.textContent=store.is_active?"إغلاق المتجر":"فتح المتجر";
+
     toggle.onclick=async()=>{
       const {error}=await db.from("stores")
         .update({is_active:!store.is_active}).eq("id",store.id);
-      if(error){say("تعذر تغيير حالة المتجر: "+error.message,true);return;}
+
+      if(error){
+        say("تعذر تغيير حالة المتجر: "+error.message,true);
+        return;
+      }
+
       say("تم تغيير حالة المتجر.");
       await loadStores();
     };
+
     card.appendChild(toggle);
     box.appendChild(card);
   });
 }
 
-/* المنتجات */
+/* اختيار المتجر للمنتجات */
 function fillStoreOptions(){
   const select=$("productStore");
   const selected=select.value;
@@ -533,6 +596,7 @@ function fillStoreOptions(){
   if(selected)select.value=selected;
 }
 
+/* المنتجات */
 async function loadProducts(){
   const {data,error}=await db.from("products")
     .select("id,name,store_id,price,image,is_active,created_at")
@@ -543,6 +607,7 @@ async function loadProducts(){
     say("تعذر تحميل المنتجات: "+error.message,true);
     return;
   }
+
   allProducts=data||[];
   renderProducts();
 }
@@ -571,6 +636,7 @@ async function addProduct(){
   $("productStore").value="";
   $("productPrice").value="";
   $("productImage").value="";
+
   say("تمت إضافة المنتج.");
   await loadProducts();
 }
@@ -589,6 +655,7 @@ function renderProducts(){
     card.className="product";
 
     const store=allStores.find(s=>Number(s.id)===Number(product.store_id));
+
     addText(card,"المنتج: ",product.name);
     addText(card,"المتجر: ",store?store.name:product.store_id);
     addText(card,"السعر: ",money(product.price));
@@ -597,45 +664,64 @@ function renderProducts(){
     const edit=document.createElement("button");
     edit.className="edit";
     edit.textContent="تعديل الاسم والسعر والصورة";
+
     edit.onclick=async()=>{
       const name=prompt("اسم المنتج:",product.name);
       if(name===null)return;
+
       const priceText=prompt("السعر بالدينار:",product.price);
       if(priceText===null)return;
+
       const image=prompt("رابط الصورة:",product.image||"");
       if(image===null)return;
 
       const price=Number(priceText);
+
       if(name.trim().length<2||!Number.isFinite(price)||price<0){
         say("الاسم أو السعر غير صحيح.",true);
         return;
       }
 
       const {error}=await db.from("products").update({
-        name:name.trim(),price,image:image.trim()
+        name:name.trim(),
+        price,
+        image:image.trim()
       }).eq("id",product.id);
 
-      if(error){say("تعذر تعديل المنتج: "+error.message,true);return;}
+      if(error){
+        say("تعذر تعديل المنتج: "+error.message,true);
+        return;
+      }
+
       say("تم تعديل المنتج.");
       await loadProducts();
     };
+
     card.appendChild(edit);
 
     const toggle=document.createElement("button");
     toggle.className=product.is_active?"cancel":"done";
     toggle.textContent=product.is_active?"إيقاف المنتج":"تفعيل المنتج";
+
     toggle.onclick=async()=>{
       const {error}=await db.from("products")
         .update({is_active:!product.is_active}).eq("id",product.id);
-      if(error){say("تعذر تغيير حالة المنتج: "+error.message,true);return;}
+
+      if(error){
+        say("تعذر تغيير حالة المنتج: "+error.message,true);
+        return;
+      }
+
       say("تم تغيير حالة المنتج.");
       await loadProducts();
     };
+
     card.appendChild(toggle);
     box.appendChild(card);
   });
 }
 
+/* تسجيل الخروج */
 async function logout(){
   await db.auth.signOut();
   $("dashboard").hidden=true;
@@ -649,3 +735,4 @@ verifySession();
 </script>
 </body>
 </html>
+<!
