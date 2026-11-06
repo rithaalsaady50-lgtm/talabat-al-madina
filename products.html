@@ -31,6 +31,7 @@ textarea{min-height:80px}
 #result{white-space:pre-wrap;overflow-wrap:anywhere}
 .success{color:#16834a}
 .error{color:#b42318}
+.fee-row{margin-top:12px;padding-top:10px;border-top:1px dashed #ccc}
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -56,12 +57,17 @@ textarea{min-height:80px}
 <h2>🛒 سلة المشتريات</h2>
 <p id="cartCount">عدد المنتجات: 0</p>
 <div id="cartItems">السلة فارغة</div>
-<p class="total" id="total">مجموع المنتجات: 0 دينار</p>
+
+<p id="productsTotal">مجموع المنتجات: 0 دينار</p>
+<p id="deliveryFeeDisplay" class="fee-row">أجرة التوصيل: جاري التحميل...</p>
+<p class="total" id="total">المجموع النهائي: 0 دينار</p>
 </div>
 
 <div class="checkout">
 <h2>إتمام الطلب</h2>
-<div class="notice">أجرة التوصيل يحددها المدير بعد مراجعة الطلب.</div>
+<div class="notice" id="deliveryNotice">
+جاري تحميل أجرة التوصيل...
+</div>
 
 <form id="orderForm">
 <label>اسم الزبون</label>
@@ -89,19 +95,20 @@ const SUPABASE_URL =
 
 const SUPABASE_KEY =
 "sb_publishable_dTg1TjFIepJqVTycKHe42A_DW0ZwNT_";
+
 const db = supabase.createClient(
-  SUPABASE_URL,
-  SUPABASE_KEY.trim()
+ SUPABASE_URL,
+ SUPABASE_KEY.trim()
 );
 
 const params = new URLSearchParams(location.search);
 const storeId = Number(params.get("storeId"));
-const storeName = params.get("store") || "المتجر";
-
-document.getElementById("storeName").textContent = storeName;
+const requestedStoreName = params.get("store") || "المتجر";
 
 let products = [];
 let cart = [];
+let deliveryFee = 0;
+let currentStoreName = requestedStoreName;
 
 const productsArea = document.getElementById("products");
 const cartArea = document.getElementById("cartItems");
@@ -112,10 +119,14 @@ function money(value){
  return Number(value || 0).toLocaleString("en-US") + " دينار";
 }
 
-function total(){
+function productsTotal(){
  return cart.reduce((sum,item)=>{
   return sum + Number(item.price) * item.quantity;
  },0);
+}
+
+function finalTotal(){
+ return productsTotal() + (cart.length > 0 ? deliveryFee : 0);
 }
 
 async function loadProducts(){
@@ -126,6 +137,29 @@ async function loadProducts(){
  }
 
  try{
+
+  const {data:store,error:storeError} = await db
+   .from("stores")
+   .select("id,name,delivery_fee,is_active")
+   .eq("id",storeId)
+   .eq("is_active",true)
+   .maybeSingle();
+
+  if(storeError) throw storeError;
+
+  if(!store){
+   throw new Error("المتجر غير موجود أو غير نشط حالياً.");
+  }
+
+  deliveryFee = Number(store.delivery_fee || 0);
+  currentStoreName = store.name || requestedStoreName;
+
+  document.getElementById("storeName").textContent =
+   currentStoreName;
+
+  document.getElementById("deliveryNotice").textContent =
+   "أجرة التوصيل لهذا المتجر: " + money(deliveryFee);
+
   const {data,error} = await db
    .from("products")
    .select("id,name,price,image,store_id,is_active")
@@ -138,7 +172,6 @@ async function loadProducts(){
   products = data || [];
 
   const activeIds = products.map(p=>p.id);
-
   cart = cart.filter(item=>activeIds.includes(item.id));
 
   showProducts();
@@ -147,7 +180,9 @@ async function loadProducts(){
  }catch(error){
   console.error(error);
   productsArea.textContent =
-   "تعذر تحميل المنتجات: " + error.message;
+   "تعذر تحميل المتجر أو المنتجات: " + error.message;
+  document.getElementById("deliveryNotice").textContent =
+   "تعذر تحميل أجرة التوصيل.";
  }
 }
 
@@ -191,6 +226,7 @@ function showProducts(){
 }
 
 function addToCart(index){
+
  const product = products[index];
  if(!product || !product.is_active) return;
 
@@ -269,8 +305,14 @@ function showCart(){
  document.getElementById("cartCount").textContent =
   "عدد المنتجات: " + count;
 
+ document.getElementById("productsTotal").textContent =
+  "مجموع المنتجات: " + money(productsTotal());
+
+ document.getElementById("deliveryFeeDisplay").textContent =
+  "أجرة التوصيل: " + money(cart.length > 0 ? deliveryFee : 0);
+
  document.getElementById("total").textContent =
-  "مجموع المنتجات: " + money(total());
+  "المجموع النهائي: " + money(finalTotal());
 }
 
 document.getElementById("orderForm")
@@ -308,6 +350,25 @@ document.getElementById("orderForm")
 
  try{
 
+  const {data:store,error:storeError} = await db
+   .from("stores")
+   .select("id,name,delivery_fee,is_active")
+   .eq("id",storeId)
+   .eq("is_active",true)
+   .maybeSingle();
+
+  if(storeError) throw storeError;
+
+  if(!store){
+   throw new Error("المتجر غير متاح حالياً.");
+  }
+
+  const currentDeliveryFee = Number(store.delivery_fee || 0);
+
+  if(!Number.isFinite(currentDeliveryFee) || currentDeliveryFee < 0){
+   throw new Error("أجرة التوصيل غير صحيحة. يرجى مراجعة المدير.");
+  }
+
   const {data:activeProducts,error:checkError} = await db
    .from("products")
    .select("id,name,price,is_active")
@@ -321,13 +382,16 @@ document.getElementById("orderForm")
    cart = cart.filter(item =>
     activeProducts && activeProducts.some(p=>p.id === item.id)
    );
+
    showCart();
    await loadProducts();
+
    throw new Error("بعض المنتجات توقفت. راجع السلة وحاول مجدداً.");
   }
 
   const verifiedCart = cart.map(item=>{
    const current = activeProducts.find(p=>p.id === item.id);
+
    return {
     id:current.id,
     name:current.name,
@@ -336,9 +400,12 @@ document.getElementById("orderForm")
    };
   });
 
-  const verifiedTotal = verifiedCart.reduce((sum,item)=>{
+  const verifiedProductsTotal = verifiedCart.reduce((sum,item)=>{
    return sum + item.price * item.quantity;
   },0);
+
+  const verifiedFinalTotal =
+   verifiedProductsTotal + currentDeliveryFee;
 
   submitButton.textContent = "جاري إرسال الطلب...";
 
@@ -349,8 +416,8 @@ document.getElementById("orderForm")
    customer_notes:customerNotes,
    store_id:storeId,
    products:verifiedCart,
-   total:verifiedTotal,
-   delivery_fee:null,
+   total:verifiedFinalTotal,
+   delivery_fee:currentDeliveryFee,
    status:"بانتظار مراجعة المدير"
   };
 
@@ -362,7 +429,10 @@ document.getElementById("orderForm")
 
   resultArea.className = "message success";
   resultArea.textContent =
-   "تم إرسال الطلب بنجاح.";
+   "تم إرسال الطلب بنجاح.\n" +
+   "مجموع المنتجات: " + money(verifiedProductsTotal) + "\n" +
+   "أجرة التوصيل: " + money(currentDeliveryFee) + "\n" +
+   "المجموع النهائي: " + money(verifiedFinalTotal);
 
   cart = [];
   showCart();
