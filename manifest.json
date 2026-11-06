@@ -1,10 +1,21 @@
+
 {
   "name": "طلبات المدينة",
   "short_name": "طلبات المدينة",
+  "description": "كل احتياجاتك توصلك لحد باب البيت",
   "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#f3f5f8",
   "theme_color": "#102a43",
   "lang": "ar",
-  "dir": "rtl"
+  "dir": "rtl",
+  "icons": [
+    {
+      "src": "./f8f35bf95c9debc2e3eb0cdb68e0aa6ac5579ea54ec17c330c87ac5df367b911.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
 }
