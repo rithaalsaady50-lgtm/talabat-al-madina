@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -33,6 +32,9 @@ textarea{min-height:80px}
 .error{color:#b42318}
 .fee-row{margin-top:12px;padding-top:10px;border-top:1px dashed #ccc}
 .track-link{display:block;background:#102a43;color:white;padding:12px;border-radius:8px;text-decoration:none;margin-top:12px}
+.location-box{background:#f0f7ff;border:1px solid #c8def5;padding:14px;border-radius:10px;margin:12px 0;line-height:1.8}
+.location-status{font-size:14px;margin-top:10px;overflow-wrap:anywhere}
+.location-button{background:#1769aa}
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -58,7 +60,6 @@ textarea{min-height:80px}
 <h2>🛒 سلة المشتريات</h2>
 <p id="cartCount">عدد المنتجات: 0</p>
 <div id="cartItems">السلة فارغة</div>
-
 <p id="productsTotal">مجموع المنتجات: 0 دينار</p>
 <p id="deliveryFeeDisplay" class="fee-row">أجرة التوصيل: جاري التحميل...</p>
 <p class="total" id="total">المجموع النهائي: 0 دينار</p>
@@ -66,8 +67,20 @@ textarea{min-height:80px}
 
 <div class="checkout">
 <h2>إتمام الطلب</h2>
+
 <div class="notice" id="deliveryNotice">
 جاري تحميل أجرة التوصيل...
+</div>
+
+<div class="location-box">
+<strong>📍 موقع التوصيل</strong>
+<p>اضغط على الزر حتى يحدد جهازك موقعك الحالي.</p>
+<button type="button" id="locationButton" class="location-button">
+📍 تحديد موقعي الحالي
+</button>
+<div id="locationStatus" class="location-status">
+لم يتم تحديد الموقع بعد.
+</div>
 </div>
 
 <form id="orderForm">
@@ -94,6 +107,7 @@ textarea{min-height:80px}
 const SUPABASE_URL =
 "https://iombzxymujzetguqdhkq.supabase.co";
 
+// ضع هنا نفس مفتاح Publishable الموجود في ملفك السابق
 const SUPABASE_KEY =
 "sb_publishable_dTg1TjFIepJqVTycKHe42A_DW0ZwNT_";
 
@@ -111,10 +125,16 @@ let cart = [];
 let deliveryFee = 0;
 let currentStoreName = requestedStoreName;
 
+// إحداثيات موقع الزبون
+let customerLatitude = null;
+let customerLongitude = null;
+
 const productsArea = document.getElementById("products");
 const cartArea = document.getElementById("cartItems");
 const resultArea = document.getElementById("result");
 const submitButton = document.getElementById("submitButton");
+const locationButton = document.getElementById("locationButton");
+const locationStatus = document.getElementById("locationStatus");
 
 function money(value){
  return Number(value || 0).toLocaleString("en-US") + " دينار";
@@ -129,6 +149,68 @@ function productsTotal(){
 function finalTotal(){
  return productsTotal() + (cart.length > 0 ? deliveryFee : 0);
 }
+
+// تحديد موقع الزبون
+locationButton.addEventListener("click",function(){
+
+ if(!navigator.geolocation){
+  locationStatus.textContent =
+   "جهازك أو المتصفح لا يدعم تحديد الموقع.";
+  return;
+ }
+
+ locationButton.disabled = true;
+ locationButton.textContent = "جاري تحديد موقعك...";
+ locationStatus.textContent =
+  "يرجى السماح للمتصفح بالوصول إلى الموقع.";
+
+ navigator.geolocation.getCurrentPosition(
+
+  function(position){
+
+   customerLatitude = position.coords.latitude;
+   customerLongitude = position.coords.longitude;
+
+   locationStatus.textContent =
+    "تم تحديد موقعك بنجاح ✅\n" +
+    "خط العرض: " + customerLatitude + "\n" +
+    "خط الطول: " + customerLongitude;
+
+   locationStatus.className = "location-status success";
+
+   locationButton.textContent = "تم تحديد الموقع ✓";
+   locationButton.disabled = false;
+  },
+
+  function(error){
+
+   customerLatitude = null;
+   customerLongitude = null;
+
+   let message = "تعذر تحديد الموقع.";
+
+   if(error.code === 1){
+    message = "لم تسمح بالوصول إلى الموقع. فعّل إذن الموقع من إعدادات المتصفح.";
+   }else if(error.code === 2){
+    message = "تعذر معرفة موقع الجهاز. تحقق من تشغيل خدمة الموقع.";
+   }else if(error.code === 3){
+    message = "انتهت مهلة تحديد الموقع. حاول مرة ثانية.";
+   }
+
+   locationStatus.textContent = message;
+   locationStatus.className = "location-status error";
+
+   locationButton.textContent = "إعادة تحديد موقعي";
+   locationButton.disabled = false;
+  },
+
+  {
+   enableHighAccuracy:true,
+   timeout:20000,
+   maximumAge:0
+  }
+ );
+});
 
 async function loadProducts(){
 
@@ -182,6 +264,7 @@ async function loadProducts(){
   console.error(error);
   productsArea.textContent =
    "تعذر تحميل المتجر أو المنتجات: " + error.message;
+
   document.getElementById("deliveryNotice").textContent =
    "تعذر تحميل أجرة التوصيل.";
  }
@@ -334,6 +417,15 @@ document.getElementById("orderForm")
   return;
  }
 
+ // لا يتم إرسال الطلب قبل تحديد موقع الزبون
+ if(customerLatitude === null || customerLongitude === null){
+  alert("يرجى تحديد موقعك الحالي أولاً.");
+  locationStatus.textContent =
+   "يجب تحديد موقعك قبل تأكيد الطلب.";
+  locationStatus.className = "location-status error";
+  return;
+ }
+
  const customerName =
   document.getElementById("customerName").value.trim();
 
@@ -413,7 +505,6 @@ document.getElementById("orderForm")
   const verifiedFinalTotal =
    verifiedProductsTotal + currentDeliveryFee;
 
-  // إنشاء رقم متابعة خاص بهذا الطلب
   const trackingToken = crypto.randomUUID();
 
   submitButton.textContent = "جاري إرسال الطلب...";
@@ -424,6 +515,8 @@ document.getElementById("orderForm")
    customer_phone:customerPhone,
    customer_address:customerAddress,
    customer_notes:customerNotes,
+   customer_latitude:customerLatitude,
+   customer_longitude:customerLongitude,
    store_id:storeId,
    products:verifiedCart,
    total:verifiedFinalTotal,
@@ -437,7 +530,6 @@ document.getElementById("orderForm")
 
   if(error) throw error;
 
-  // إنشاء رابط متابعة الطلب
   const trackingUrl = new URL(
    "track.html",
    location.href
@@ -461,11 +553,14 @@ document.getElementById("orderForm")
    "\nأجرة التوصيل: " + money(currentDeliveryFee) +
    "\nالمجموع النهائي: " + money(verifiedFinalTotal);
 
+  const locationText = document.createElement("p");
+  locationText.textContent =
+   "تم حفظ موقع التوصيل بنجاح 📍";
+
   const link = document.createElement("a");
   link.className = "track-link";
   link.href = trackingUrl.href;
   link.textContent = "متابعة حالة الطلب";
-
   link.target = "_blank";
   link.rel = "noopener";
 
@@ -487,6 +582,7 @@ document.getElementById("orderForm")
    successText,
    tokenText,
    amountText,
+   locationText,
    link,
    copyButton
   );
@@ -494,6 +590,13 @@ document.getElementById("orderForm")
   cart = [];
   showCart();
   document.getElementById("orderForm").reset();
+
+  customerLatitude = null;
+  customerLongitude = null;
+
+  locationStatus.textContent = "لم يتم تحديد الموقع بعد.";
+  locationStatus.className = "location-status";
+  locationButton.textContent = "📍 تحديد موقعي الحالي";
 
  }catch(error){
 
