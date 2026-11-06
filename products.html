@@ -34,7 +34,11 @@ textarea{min-height:80px}
 .track-link{display:block;background:#102a43;color:white;padding:12px;border-radius:8px;text-decoration:none;margin-top:12px}
 .location-box{background:#f0f7ff;border:1px solid #c8def5;padding:14px;border-radius:10px;margin:12px 0;line-height:1.8}
 .location-status{font-size:14px;margin-top:10px;overflow-wrap:anywhere}
-.location-button{background:#1769aa}
+.location-button{background:#1769aa;width:100%;margin-top:10px}
+.waze-button{background:#33a6d9}
+@media(max-width:420px){
+ .products{grid-template-columns:1fr}
+}
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -74,10 +78,16 @@ textarea{min-height:80px}
 
 <div class="location-box">
 <strong>📍 موقع التوصيل</strong>
-<p>اضغط على الزر حتى يحدد جهازك موقعك الحالي.</p>
+<p>حدد موقعك الحالي أولاً، وبعدها يمكنك فتح موقعك في تطبيق Waze.</p>
+
 <button type="button" id="locationButton" class="location-button">
 📍 تحديد موقعي الحالي
 </button>
+
+<button type="button" id="wazeButton" class="location-button waze-button">
+🚗 فتح موقعي عبر Waze
+</button>
+
 <div id="locationStatus" class="location-status">
 لم يتم تحديد الموقع بعد.
 </div>
@@ -107,9 +117,8 @@ textarea{min-height:80px}
 const SUPABASE_URL =
 "https://iombzxymujzetguqdhkq.supabase.co";
 
-// ضع هنا نفس مفتاح Publishable الموجود في ملفك السابق
-const SUPABASE_KEY =
-"sb_publishable_dTg1TjFIepJqVTycKHe42A_DW0ZwNT_";
+// الصق مفتاح Publishable الخاص بمشروعك هنا
+const SUPABASE_KEY = "sb_publishable_dTg1TjFIepJqVTycKHe42A_DW0ZwNT_";
 
 const db = supabase.createClient(
  SUPABASE_URL,
@@ -125,7 +134,6 @@ let cart = [];
 let deliveryFee = 0;
 let currentStoreName = requestedStoreName;
 
-// إحداثيات موقع الزبون
 let customerLatitude = null;
 let customerLongitude = null;
 
@@ -134,6 +142,7 @@ const cartArea = document.getElementById("cartItems");
 const resultArea = document.getElementById("result");
 const submitButton = document.getElementById("submitButton");
 const locationButton = document.getElementById("locationButton");
+const wazeButton = document.getElementById("wazeButton");
 const locationStatus = document.getElementById("locationStatus");
 
 function money(value){
@@ -177,7 +186,6 @@ locationButton.addEventListener("click",function(){
     "خط الطول: " + customerLongitude;
 
    locationStatus.className = "location-status success";
-
    locationButton.textContent = "تم تحديد الموقع ✓";
    locationButton.disabled = false;
   },
@@ -210,6 +218,22 @@ locationButton.addEventListener("click",function(){
    maximumAge:0
   }
  );
+});
+
+// فتح Waze على إحداثيات موقع الزبون
+wazeButton.addEventListener("click",function(){
+
+ if(customerLatitude === null || customerLongitude === null){
+  alert("حدد موقعك الحالي أولاً، وبعدها افتح Waze.");
+  return;
+ }
+
+ const wazeUrl =
+  "https://waze.com/ul?ll=" +
+  encodeURIComponent(customerLatitude + "," + customerLongitude) +
+  "&navigate=yes";
+
+ window.location.href = wazeUrl;
 });
 
 async function loadProducts(){
@@ -417,7 +441,6 @@ document.getElementById("orderForm")
   return;
  }
 
- // لا يتم إرسال الطلب قبل تحديد موقع الزبون
  if(customerLatitude === null || customerLongitude === null){
   alert("يرجى تحديد موقعك الحالي أولاً.");
   locationStatus.textContent =
@@ -530,22 +553,16 @@ document.getElementById("orderForm")
 
   if(error) throw error;
 
-  const trackingUrl = new URL(
-   "track.html",
-   location.href
-  );
-
+  const trackingUrl = new URL("track.html",location.href);
   trackingUrl.searchParams.set("token",trackingToken);
 
   resultArea.className = "message success";
 
   const successText = document.createElement("p");
-  successText.textContent =
-   "تم إرسال الطلب بنجاح!";
+  successText.textContent = "تم إرسال الطلب بنجاح!";
 
   const tokenText = document.createElement("p");
-  tokenText.textContent =
-   "رقم متابعة طلبك: " + trackingToken;
+  tokenText.textContent = "رقم متابعة طلبك: " + trackingToken;
 
   const amountText = document.createElement("p");
   amountText.textContent =
@@ -554,8 +571,7 @@ document.getElementById("orderForm")
    "\nالمجموع النهائي: " + money(verifiedFinalTotal);
 
   const locationText = document.createElement("p");
-  locationText.textContent =
-   "تم حفظ موقع التوصيل بنجاح 📍";
+  locationText.textContent = "تم حفظ موقع التوصيل بنجاح 📍";
 
   const link = document.createElement("a");
   link.className = "track-link";
