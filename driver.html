@@ -6,6 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>حساب الموصّل - طلبات المدينة</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <style>
 *{box-sizing:border-box}
 body{margin:0;font-family:Arial;background:#f3f5f8;color:#222}
@@ -18,8 +19,9 @@ button{border:0;background:#16834a;color:white;cursor:pointer}
 button:disabled{opacity:.5}
 button.dark{background:#102a43}
 button.red{background:#c0392b}
+button.orange{background:#d97706}
 .order-title{font-weight:bold;color:#102a43;font-size:18px}
-.info{line-height:2}
+.info{line-height:2;overflow-wrap:anywhere}
 .actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .actions a{display:block;text-align:center;padding:12px;border-radius:8px;color:white;text-decoration:none;background:#16834a}
 .actions a.blue{background:#1769aa}
@@ -29,8 +31,12 @@ button.red{background:#c0392b}
 .status-current{background:#eef5f0;padding:10px;border-radius:8px;margin-top:10px}
 .hidden{display:none}
 #message{padding:10px;color:#c0392b;text-align:center;overflow-wrap:anywhere}
+.section-title{color:#102a43;margin:22px 4px 8px}
+.available-card{border-right:5px solid #16834a}
+.small{color:#666;font-size:14px}
 </style>
 </head>
+
 <body>
 
 <header>
@@ -49,15 +55,22 @@ button.red{background:#c0392b}
 </div>
 
 <div id="accountBox" class="hidden">
+
 <div class="card">
 <h3 id="driverName">أهلاً بك</h3>
-<p>الطلبات المسندة إلى حسابك</p>
-<button class="dark" onclick="loadOrders()">تحديث الطلبات</button>
+<p>تابع الطلبات المتاحة والطلبات المسندة إليك.</p>
+<button class="dark" onclick="loadOrders()">🔄 تحديث الطلبات</button>
 <button class="red" onclick="logout()">تسجيل الخروج</button>
 </div>
-<div id="orders"></div>
-</div>
 
+<h3 class="section-title">📦 الطلبات المتاحة</h3>
+<p class="small">تظهر هنا الطلبات التي لم يستلمها أي موصّل بعد.</p>
+<div id="availableOrders"></div>
+
+<h3 class="section-title">🚚 الطلبات المسندة إليك</h3>
+<div id="orders"></div>
+
+</div>
 </div>
 
 <script>
@@ -86,6 +99,12 @@ function escapeHTML(value){
     "&":"&amp;","<":"&lt;",">":"&gt;",
     '"':"&quot;","'":"&#39;"
   })[ch]);
+}
+
+function displayValue(value){
+  if(value == null || value === "") return "غير متوفر";
+  if(typeof value === "object") return JSON.stringify(value);
+  return String(value);
 }
 
 let db = null;
@@ -165,6 +184,7 @@ async function login(){
     }
 
     currentDriver = profile;
+
     document.getElementById("loginBox").classList.add("hidden");
     document.getElementById("accountBox").classList.remove("hidden");
     document.getElementById("driverName").textContent =
@@ -179,6 +199,117 @@ async function login(){
   }
 }
 
+/* تحميل الطلبات المتاحة */
+async function loadAvailableOrders(){
+  const box = document.getElementById("availableOrders");
+
+  box.innerHTML =
+    "<div class='card'>جارٍ تحميل الطلبات المتاحة...</div>";
+
+  try{
+    const {data,error} = await db.rpc(
+      "driver_available_orders"
+    );
+
+    if(error){
+      box.innerHTML =
+        "<div class='card'>تعذر تحميل الطلبات المتاحة: " +
+        escapeHTML(error.message) + "</div>";
+      return;
+    }
+
+    if(!data || data.length === 0){
+      box.innerHTML =
+        "<div class='card'>لا توجد طلبات متاحة حالياً.</div>";
+      return;
+    }
+
+    box.innerHTML = data.map(order => {
+      const orderId = String(order.order_id || "")
+        .replace(/\D/g,"");
+
+      return `
+        <div class="card available-card">
+          <div class="order-title">
+            طلب رقم: ${escapeHTML(orderId)}
+          </div>
+
+          <div class="info">
+            <b>المبلغ:</b>
+            ${escapeHTML(order.order_total)} د.ع<br>
+
+            <b>الحالة:</b>
+            ${escapeHTML(order.order_status)}<br>
+
+            <b>التاريخ:</b>
+            ${escapeHTML(
+              order.order_created_at
+                ? new Date(order.order_created_at)
+                    .toLocaleString("ar-IQ")
+                : "غير متوفر"
+            )}
+          </div>
+
+          <p class="small">
+            بيانات الزبون تظهر بعد قبول الطلب.
+          </p>
+
+          <button
+            type="button"
+            onclick="claimOrder('${orderId}',this)"
+          >قبول الطلب</button>
+        </div>
+      `;
+    }).join("");
+
+  }catch(error){
+    box.innerHTML =
+      "<div class='card'>خطأ: " +
+      escapeHTML(error.message) + "</div>";
+  }
+}
+
+/* قبول الطلب بشكل آمن */
+async function claimOrder(orderId,button){
+  if(!currentDriver) return;
+
+  if(!confirm("هل تريد استلام الطلب رقم " + orderId + "؟")){
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = "جارٍ قبول الطلب...";
+
+  try{
+    const {data,error} = await db.rpc(
+      "driver_claim_order",
+      {p_order_id:orderId}
+    );
+
+    if(error){
+      alert("تعذر قبول الطلب: " + error.message);
+      button.disabled = false;
+      button.textContent = "قبول الطلب";
+      return;
+    }
+
+    if(data !== true){
+      alert("هذا الطلب استلمه موصّل آخر أو لم يعد متاحاً.");
+      await loadOrders();
+      return;
+    }
+
+    alert("تم قبول الطلب بنجاح.");
+    await loadOrders();
+
+  }catch(error){
+    alert("خطأ: " + error.message);
+    button.disabled = false;
+    button.textContent = "قبول الطلب";
+  }
+}
+
+/* تحديث حالة الطلب */
 async function updateOrderStatus(orderId,status,button){
   if(!currentDriver) return;
 
@@ -233,11 +364,16 @@ async function updateOrderStatus(orderId,status,button){
   }
 }
 
+/* تحميل الطلبات المسندة والمتاحة */
 async function loadOrders(){
   if(!currentDriver) return;
 
   const box = document.getElementById("orders");
-  box.innerHTML = "<div class='card'>جارٍ تحميل الطلبات...</div>";
+
+  box.innerHTML =
+    "<div class='card'>جارٍ تحميل الطلبات المسندة...</div>";
+
+  await loadAvailableOrders();
 
   try{
     const {data,error} = await db
@@ -276,7 +412,7 @@ async function loadOrders(){
         ? "https://wa.me/" + normalizePhone(phone)
         : "";
 
-      const orderId = Number(order.id);
+      const orderId = String(order.id).replace(/\D/g,"");
 
       const statuses = [
         "تم استلام الطلب",
@@ -289,7 +425,7 @@ async function loadOrders(){
         <button
           type="button"
           class="${status === 'تعذّر توصيل الطلب' ? 'red' : ''}"
-          onclick="updateOrderStatus(${orderId},'${status}',this)"
+          onclick="updateOrderStatus('${orderId}','${status}',this)"
           ${order.status === status ? "disabled" : ""}
         >${order.status === status ? "✓ " : ""}${status}</button>
       `).join("");
@@ -301,11 +437,29 @@ async function loadOrders(){
           </div>
 
           <div class="info">
-            <b>اسم الزبون:</b> ${escapeHTML(name)}<br>
-            <b>رقم الهاتف:</b> ${escapeHTML(phone || "غير متوفر")}<br>
-            <b>العنوان:</b> ${escapeHTML(address)}<br>
-            <b>المبلغ:</b> ${escapeHTML(order.total ?? "غير محدد")} د.ع<br>
-            <b>التاريخ:</b> ${escapeHTML(
+            <b>المنتجات:</b>
+            ${escapeHTML(displayValue(order.products))}<br>
+
+            <b>اسم الزبون:</b>
+            ${escapeHTML(name)}<br>
+
+            <b>رقم الهاتف:</b>
+            ${escapeHTML(phone || "غير متوفر")}<br>
+
+            <b>العنوان:</b>
+            ${escapeHTML(address)}<br>
+
+            <b>ملاحظات الزبون:</b>
+            ${escapeHTML(order.customer_notes || "لا توجد")}<br>
+
+            <b>المبلغ:</b>
+            ${escapeHTML(order.total ?? "غير محدد")} د.ع<br>
+
+            <b>أجور التوصيل:</b>
+            ${escapeHTML(order.delivery_fee ?? "غير محدد")} د.ع<br>
+
+            <b>التاريخ:</b>
+            ${escapeHTML(
               order.created_at
                 ? new Date(order.created_at).toLocaleString("ar-IQ")
                 : "غير متوفر"
@@ -342,10 +496,13 @@ async function logout(){
   if(db) await db.auth.signOut();
 
   currentDriver = null;
+
   document.getElementById("accountBox").classList.add("hidden");
   document.getElementById("loginBox").classList.remove("hidden");
   document.getElementById("orders").innerHTML = "";
+  document.getElementById("availableOrders").innerHTML = "";
   document.getElementById("password").value = "";
+
   showMessage("تم تسجيل الخروج");
 }
 
