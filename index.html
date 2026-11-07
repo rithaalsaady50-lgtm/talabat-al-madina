@@ -2,193 +2,344 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>طلبات المدينة</title>
+<meta name="description" content="طلبات المدينة - كل احتياجاتك توصلك لحد باب البيت">
+<meta name="theme-color" content="#5145df">
+<link rel="manifest" href="./manifest.json">
 
-  <title>طلبات المدينة</title>
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:Arial,sans-serif;
+  background:#f5f6fa;
+  color:#222;
+  padding-bottom:90px;
+}
+.hero{
+  background:#5145df;
+  color:white;
+  padding:38px 22px 28px;
+  border-radius:0 0 5px 5px;
+}
+.greeting{
+  font-size:29px;
+  font-weight:bold;
+  margin-bottom:12px;
+}
+.subtitle{
+  color:#dedaff;
+  font-size:19px;
+  margin-bottom:30px;
+}
+.location{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  background:#7168e9;
+  border:2px solid #827af0;
+  border-radius:22px;
+  padding:15px;
+  color:white;
+  font-size:17px;
+  font-weight:bold;
+  width:100%;
+  cursor:pointer;
+}
+.location small{
+  background:#938cf1;
+  padding:7px 12px;
+  border-radius:20px;
+}
+.location-result{
+  font-size:13px;
+  margin-top:10px;
+  color:#fff;
+}
+.container{
+  max-width:700px;
+  margin:auto;
+  padding:18px 15px;
+}
+.categories{
+  display:grid;
+  gap:25px;
+}
+.category{
+  display:flex;
+  align-items:stretch;
+  min-height:175px;
+  border-radius:35px;
+  overflow:hidden;
+  text-decoration:none;
+  color:white;
+  box-shadow:0 5px 12px #00000012;
+}
+.category-content{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  text-align:right;
+  padding:15px 12px;
+}
+.category h2{
+  font-size:27px;
+  margin:0 0 10px;
+}
+.category p{
+  font-size:16px;
+  line-height:1.6;
+  margin:0;
+  color:#f4f4f4;
+}
+.category-icon{
+  width:26%;
+  min-width:105px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:#00000012;
+  font-size:55px;
+}
+.arrow{
+  align-self:center;
+  font-size:36px;
+  margin:0 12px;
+}
+.orange{background:#f36b12}
+.purple{background:#625ce9}
+.green{background:#0aaa7d}
+.blue{background:#129ed2}
+.red{background:#df174a}
+.yellow{background:#e7a21a}
 
-  <meta name="description" content="طلبات المدينة - كل احتياجاتك توصلك لحد باب البيت">
-  <meta name="theme-color" content="#102a43">
-
-  <link rel="manifest" href="./manifest.json">
-
-  <style>
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #f3f5f8;
-      color: #222;
-    }
-
-    header {
-      background: #102a43;
-      color: white;
-      text-align: center;
-      padding: 25px 15px;
-    }
-
-    header h1 {
-      margin: 0 0 10px;
-      font-size: 27px;
-    }
-
-    header p {
-      margin: 0;
-      font-size: 15px;
-    }
-
-    .container {
-      padding: 18px;
-      max-width: 650px;
-      margin: auto;
-    }
-
-    .welcome {
-      background: white;
-      padding: 20px;
-      border-radius: 14px;
-      text-align: center;
-      box-shadow: 0 2px 8px #00000010;
-      margin-bottom: 18px;
-    }
-
-    .welcome h2 {
-      color: #102a43;
-      margin-top: 0;
-    }
-
-    .menu {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 12px;
-    }
-
-    .item {
-      background: white;
-      border-radius: 14px;
-      padding: 20px 10px;
-      text-align: center;
-      text-decoration: none;
-      color: #102a43;
-      box-shadow: 0 2px 8px #00000010;
-      font-size: 17px;
-      font-weight: bold;
-    }
-
-    .item span {
-      display: block;
-      font-size: 35px;
-      margin-bottom: 10px;
-    }
-
-    .install {
-      display: none;
-      width: 100%;
-      border: none;
-      border-radius: 10px;
-      padding: 14px;
-      margin-top: 18px;
-      background: #16834a;
-      color: white;
-      font-size: 17px;
-      font-weight: bold;
-    }
-
-    footer {
-      text-align: center;
-      padding: 22px;
-      color: #666;
-      font-size: 13px;
-    }
-  </style>
+.install{
+  display:none;
+  width:100%;
+  padding:14px;
+  margin-top:20px;
+  background:#16834a;
+  color:white;
+  border:0;
+  border-radius:12px;
+  font-size:17px;
+}
+.bottom-nav{
+  position:fixed;
+  bottom:0;
+  left:0;
+  right:0;
+  height:82px;
+  background:white;
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  box-shadow:0 -3px 15px #00000012;
+  z-index:10;
+  padding:5px 7px;
+}
+.nav-item{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:5px;
+  text-decoration:none;
+  color:#9aa5b3;
+  font-size:13px;
+  border-radius:22px;
+  cursor:pointer;
+}
+.nav-item span{font-size:25px}
+.nav-item.active{
+  background:#eeecff;
+  color:#5145df;
+  font-weight:bold;
+}
+footer{
+  text-align:center;
+  color:#888;
+  padding:20px;
+  font-size:12px;
+}
+@media(max-width:380px){
+  .category{min-height:145px}
+  .category h2{font-size:22px}
+  .category p{font-size:14px}
+  .category-icon{min-width:85px;font-size:43px}
+  .greeting{font-size:25px}
+}
+</style>
 </head>
 
 <body>
 
-  <header>
-    <h1>طلبات المدينة</h1>
-    <p>كل احتياجاتك توصلك لحد باب البيت</p>
-  </header>
+<section class="hero">
+  <div class="greeting">👋 أهلاً رضا</div>
+  <div class="subtitle">شلون نكدر نخدمك اليوم؟</div>
 
-  <main class="container">
+  <button class="location" onclick="getLocation()">
+    <span>📍 اضغط لتحديد موقعك</span>
+    <small>تغيير</small>
+  </button>
 
-    <section class="welcome">
-      <h2>أهلاً وسهلاً بك</h2>
-      <p>اطلب احتياجاتك بسهولة من متاجر مدينتك.</p>
-    </section>
+  <div id="locationResult" class="location-result"></div>
+</section>
 
-    <section class="menu">
+<main class="container">
 
-      <a class="item" href="./stores.html">
-        <span>🏪</span>
-        المتاجر
-      </a>
+  <section class="categories">
 
-      <a class="item" href="./products.html?storeId=1&store=مطعم%20تجريبي">
-        <span>🍔</span>
-        المنتجات
-      </a>
+    <a class="category orange" href="./stores.html">
+      <div class="category-content">
+        <h2>مطعم</h2>
+        <p>برغر - شاورما - بيتزا - كل ما تشتهي</p>
+      </div>
+      <div class="category-icon">🍴</div>
+      <div class="arrow">‹</div>
+    </a>
 
-      <a class="item" href="./admin.html">
-        <span>⚙️</span>
-        لوحة المدير
-      </a>
+    <a class="category purple" href="./stores.html">
+      <div class="category-content">
+        <h2>كوزمتك واللبسة</h2>
+        <p>عناية - ملابس - عطور - إكسسوارات - مكياج</p>
+      </div>
+      <div class="category-icon">🌸</div>
+      <div class="arrow">‹</div>
+    </a>
 
-      <a class="item" href="./stores.html">
-        <span>🛵</span>
-        اطلب الآن
-      </a>
+    <a class="category green" href="./stores.html">
+      <div class="category-content">
+        <h2>ماركت</h2>
+        <p>بقالة - خضار - غذائية منزلية - أطفال</p>
+      </div>
+      <div class="category-icon">🛒</div>
+      <div class="arrow">‹</div>
+    </a>
 
-    </section>
+    <a class="category blue" href="./stores.html">
+      <div class="category-content">
+        <h2>مخابز وحلويات</h2>
+        <p>خبز - كيك - مستلزمات عيد الميلاد - معجنات</p>
+      </div>
+      <div class="category-icon">🥐</div>
+      <div class="arrow">‹</div>
+    </a>
 
-    <button id="installButton" class="install">
-      تثبيت تطبيق طلبات المدينة
-    </button>
+    <a class="category red" href="./stores.html">
+      <div class="category-content">
+        <h2>طبخ منزلي</h2>
+        <p>كبة - دولمة - لحم بعجين - أكلات بيتية</p>
+      </div>
+      <div class="category-icon">🏪</div>
+      <div class="arrow">‹</div>
+    </a>
 
-  </main>
+    <a class="category yellow" href="./stores.html">
+      <div class="category-content">
+        <h2>صيدليات</h2>
+        <p>مستلزمات الصيدلية والاحتياجات الصحية</p>
+      </div>
+      <div class="category-icon">💊</div>
+      <div class="arrow">‹</div>
+    </a>
 
-  <footer>
-    جميع الحقوق محفوظة © طلبات المدينة
-  </footer>
+  </section>
 
-  <script>
-    // تسجيل Service Worker
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", function () {
-        navigator.serviceWorker.register("./sw.js")
-          .catch(function (error) {
-            console.log("Service Worker:", error);
-          });
-      });
+  <button id="installButton" class="install">
+    📲 تثبيت تطبيق طلبات المدينة
+  </button>
+
+</main>
+
+<footer>
+  جميع الحقوق محفوظة © طلبات المدينة
+</footer>
+
+<nav class="bottom-nav">
+  <a class="nav-item" href="#account" onclick="showNotice('قسم حسابي قيد التجهيز')">
+    <span>👤</span>
+    حسابي
+  </a>
+
+  <a class="nav-item" href="#favorites" onclick="showNotice('قسم المفضلة قيد التجهيز')">
+    <span>♥</span>
+    المفضلة
+  </a>
+
+  <a class="nav-item" href="./track.html">
+    <span>🛍️</span>
+    طلباتي
+  </a>
+
+  <a class="nav-item active" href="./index.html">
+    <span>🏠</span>
+    الرئيسية
+  </a>
+</nav>
+
+<script>
+function showNotice(text){
+  alert(text);
+}
+
+function getLocation(){
+  const result = document.getElementById("locationResult");
+
+  if(!navigator.geolocation){
+    result.textContent = "جهازك لا يدعم تحديد الموقع";
+    return;
+  }
+
+  result.textContent = "جارٍ تحديد موقعك...";
+
+  navigator.geolocation.getCurrentPosition(
+    function(position){
+      result.textContent = "تم تحديد موقعك بنجاح ✓";
+    },
+    function(error){
+      result.textContent = "لم نتمكن من تحديد الموقع. تحقق من السماح للموقع بالوصول.";
+    },
+    {
+      enableHighAccuracy:true,
+      timeout:15000
     }
+  );
+}
 
-    // زر تثبيت التطبيق إذا كان المتصفح يدعم ذلك
-    let installPrompt = null;
-    const installButton = document.getElementById("installButton");
+if("serviceWorker" in navigator){
+  window.addEventListener("load",function(){
+    navigator.serviceWorker.register("./sw.js")
+      .catch(function(error){
+        console.log(error);
+      });
+  });
+}
 
-    window.addEventListener("beforeinstallprompt", function (event) {
-      event.preventDefault();
-      installPrompt = event;
-      installButton.style.display = "block";
-    });
+let installPrompt = null;
+const installButton = document.getElementById("installButton");
 
-    installButton.addEventListener("click", async function () {
-      if (!installPrompt) return;
+window.addEventListener("beforeinstallprompt",function(event){
+  event.preventDefault();
+  installPrompt = event;
+  installButton.style.display = "block";
+});
 
-      installPrompt.prompt();
-      await installPrompt.userChoice;
-      installPrompt = null;
-      installButton.style.display = "none";
-    });
+installButton.addEventListener("click",async function(){
+  if(!installPrompt) return;
 
-    window.addEventListener("appinstalled", function () {
-      installButton.style.display = "none";
-    });
-  </script>
+  installPrompt.prompt();
+  await installPrompt.userChoice;
+  installPrompt = null;
+  installButton.style.display = "none";
+});
+
+window.addEventListener("appinstalled",function(){
+  installButton.style.display = "none";
+});
+</script>
 
 </body>
 </html>
