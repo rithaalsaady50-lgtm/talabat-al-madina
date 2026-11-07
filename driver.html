@@ -185,7 +185,8 @@ async function updateOrderStatus(orderId,status,button){
   const allowedStatuses = [
     "تم استلام الطلب",
     "بالطريق إلى الزبون",
-    "تم توصيل الطلب"
+    "تم توصيل الطلب",
+    "تعذّر توصيل الطلب"
   ];
 
   if(!allowedStatuses.includes(status)){
@@ -280,12 +281,14 @@ async function loadOrders(){
       const statuses = [
         "تم استلام الطلب",
         "بالطريق إلى الزبون",
-        "تم توصيل الطلب"
+        "تم توصيل الطلب",
+        "تعذّر توصيل الطلب"
       ];
 
       const statusButtons = statuses.map(status => `
         <button
           type="button"
+          class="${status === 'تعذّر توصيل الطلب' ? 'red' : ''}"
           onclick="updateOrderStatus(${orderId},'${status}',this)"
           ${order.status === status ? "disabled" : ""}
         >${order.status === status ? "✓ " : ""}${status}</button>
