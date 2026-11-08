@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>حسابي - طلبات المدينة</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial;background:#f3f5f8;color:#222}
+header{background:#5145df;color:white;text-align:center;padding:20px}
+main{max-width:480px;margin:20px auto;padding:15px}
+.card{background:white;padding:18px;border-radius:14px;margin-bottom:15px}
+input{width:100%;padding:13px;margin:8px 0;border:1px solid #ddd;border-radius:9px;font-size:16px}
+button{width:100%;padding:13px;border:0;border-radius:9px;background:#5145df;color:white;font-size:16px;margin-top:8px}
+.secondary{background:#102a43}
+.hidden{display:none}
+.message{text-align:center;margin:12px 0;color:#16834a}
+</style>
+</head>
+<body>
+
+<header>
+<h2>حسابي</h2>
+<p>طلبات المدينة</p>
+</header>
+
+<main>
+<div class="card" id="loginBox">
+<h3>تسجيل الدخول</h3>
+<input id="email" type="email" placeholder="البريد الإلكتروني">
+<input id="password" type="password" placeholder="كلمة المرور">
+<button onclick="login()">دخول</button>
+
+<hr>
+
+<h3>إنشاء حساب جديد</h3>
+<input id="name" type="text" placeholder="الاسم الكامل">
+<input id="newEmail" type="email" placeholder="البريد الإلكتروني">
+<input id="newPassword" type="password" placeholder="كلمة المرور">
+<input id="address" type="text" placeholder="العنوان">
+<button onclick="signup()">إنشاء حساب</button>
+<p id="message" class="message"></p>
+</div>
+
+<div class="card hidden" id="profileBox">
+<h3>مرحباً بك</h3>
+<p id="profileName"></p>
+<p id="profileEmail"></p>
+<p id="profileAddress"></p>
+<button class="secondary" onclick="logout()">تسجيل الخروج</button>
+</div>
+
+<a href="./index.html">العودة إلى الرئيسية</a>
+</main>
+
+<script type="module">
+import { createClient } from
+'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const SUPABASE_URL = 'https://iombzxymujzetguqdhkq.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_dTg1TjFIepJqVTycKHe42A_DW0ZwNT_';
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const message = document.getElementById('message');
+
+async function signup(){
+  const name = document.getElementById('name').value.trim();
+  const email = document.getElementById('newEmail').value.trim();
+  const password = document.getElementById('newPassword').value;
+  const address = document.getElementById('address').value.trim();
+
+  if(!name || !email || !password){
+    message.textContent = 'املأ الاسم والبريد وكلمة المرور';
+    return;
+  }
+
+  const {data,error} = await supabase.auth.signUp({
+    email,
+    password,
+    options:{
+      data:{
+        full_name:name,
+        address:address
+      }
+    }
+  });
+
+  if(error){
+    message.textContent = error.message;
+    return;
+  }
+
+  message.textContent = data.session
+    ? 'تم إنشاء الحساب بنجاح'
+    : 'تم إنشاء الحساب. افحص بريدك الإلكتروني لتأكيده.';
+  await checkUser();
+}
+
+async function login(){
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+
+  const {error} = await supabase.auth.signInWithPassword({
+    email,
+    password
+  });
+
+  if(error){
+    message.textContent = error.message;
+    return;
+  }
+
+  message.textContent = 'تم تسجيل الدخول';
+  await checkUser();
+}
+
+async function logout(){
+  await supabase.auth.signOut();
+  await checkUser();
+}
+
+async function checkUser(){
+  const {data:{user}} = await supabase.auth.getUser();
+
+  document.getElementById('loginBox').classList.toggle('hidden',!!user);
+  document.getElementById('profileBox').classList.toggle('hidden',!user);
+
+  if(user){
+    document.getElementById('profileName').textContent =
+      'الاسم: ' + (user.user_metadata?.full_name || 'غير محدد');
+
+    document.getElementById('profileEmail').textContent =
+      'البريد: ' + user.email;
+
+    document.getElementById('profileAddress').textContent =
+      'العنوان: ' + (user.user_metadata?.address || 'غير محدد');
+  }
+}
+
+window.signup = signup;
+window.login = login;
+window.logout = logout;
+
+await checkUser();
+
+supabase.auth.onAuthStateChange(() => {
+  checkUser();
+});
+</script>
+</body>
+</html>
