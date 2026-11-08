@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -7,8 +6,6 @@
 <title>طلبات المدينة</title>
 <meta name="description" content="طلبات المدينة - كل احتياجاتك توصلك لحد باب البيت">
 <meta name="theme-color" content="#5145df">
-
-<!-- ربط ملف التطبيق والشعار الجديد -->
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="./iconicon-192-v2.png">
 <link rel="apple-touch-icon" href="./iconicon-192-v2.png">
@@ -18,159 +15,66 @@
 <style>
 *{box-sizing:border-box}
 body{
-  margin:0;
-  font-family:Arial,sans-serif;
-  background:#f5f6fa;
-  color:#222;
-  padding-bottom:90px;
+  margin:0;font-family:Arial,sans-serif;
+  background:#f5f6fa;color:#222;padding-bottom:90px;
 }
 .hero{
-  background:#5145df;
-  color:white;
-  padding:38px 22px 28px;
-  border-radius:0 0 5px 5px;
+  background:#5145df;color:white;
+  padding:38px 22px 28px;border-radius:0 0 5px 5px;
 }
-.greeting{
-  font-size:29px;
-  font-weight:bold;
-  margin-bottom:12px;
-}
-.subtitle{
-  color:#dedaff;
-  font-size:19px;
-  margin-bottom:30px;
-}
+.greeting{font-size:29px;font-weight:bold;margin-bottom:12px}
+.subtitle{color:#dedaff;font-size:19px;margin-bottom:30px}
 .location{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  background:#7168e9;
-  border:2px solid #827af0;
-  border-radius:22px;
-  padding:15px;
-  color:white;
-  font-size:17px;
-  font-weight:bold;
-  width:100%;
-  cursor:pointer;
+  display:flex;align-items:center;justify-content:space-between;
+  background:#7168e9;border:2px solid #827af0;
+  border-radius:22px;padding:15px;color:white;
+  font-size:17px;font-weight:bold;width:100%;cursor:pointer;
 }
-.location small{
-  background:#938cf1;
-  padding:7px 12px;
-  border-radius:20px;
-}
-.location-result{
-  font-size:13px;
-  margin-top:10px;
-  color:#fff;
-}
-.container{
-  max-width:700px;
-  margin:auto;
-  padding:18px 15px;
-}
-.categories{
-  display:grid;
-  gap:25px;
-}
+.location small{background:#938cf1;padding:7px 12px;border-radius:20px}
+.location-result{font-size:13px;margin-top:10px;color:#fff}
+.container{max-width:700px;margin:auto;padding:18px 15px}
+.categories{display:grid;gap:25px}
 .category{
-  display:flex;
-  align-items:stretch;
-  min-height:175px;
-  border-radius:35px;
-  overflow:hidden;
-  text-decoration:none;
-  color:white;
-  box-shadow:0 5px 12px #00000012;
+  display:flex;align-items:stretch;min-height:175px;
+  border-radius:35px;overflow:hidden;text-decoration:none;
+  color:white;box-shadow:0 5px 12px #00000012;
 }
 .category-content{
-  flex:1;
-  display:flex;
-  flex-direction:column;
-  justify-content:center;
-  text-align:right;
-  padding:15px 12px;
+  flex:1;display:flex;flex-direction:column;
+  justify-content:center;text-align:right;padding:15px 12px;
 }
-.category h2{
-  font-size:27px;
-  margin:0 0 10px;
-}
-.category p{
-  font-size:16px;
-  line-height:1.6;
-  margin:0;
-  color:#f4f4f4;
-}
+.category h2{font-size:27px;margin:0 0 10px}
+.category p{font-size:16px;line-height:1.6;margin:0;color:#f4f4f4}
 .category-icon{
-  width:26%;
-  min-width:105px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  background:#00000012;
-  font-size:55px;
+  width:26%;min-width:105px;display:flex;
+  align-items:center;justify-content:center;
+  background:#00000012;font-size:55px;
 }
-.arrow{
-  align-self:center;
-  font-size:36px;
-  margin:0 12px;
-}
+.arrow{align-self:center;font-size:36px;margin:0 12px}
 .orange{background:#f36b12}
 .purple{background:#625ce9}
 .green{background:#0aaa7d}
 .blue{background:#129ed2}
 .red{background:#df174a}
 .yellow{background:#e7a21a}
-
 .install{
-  display:none;
-  width:100%;
-  padding:14px;
-  margin-top:20px;
-  background:#16834a;
-  color:white;
-  border:0;
-  border-radius:12px;
-  font-size:17px;
-  cursor:pointer;
+  display:none;width:100%;padding:14px;margin-top:20px;
+  background:#16834a;color:white;border:0;
+  border-radius:12px;font-size:17px;cursor:pointer;
 }
 .bottom-nav{
-  position:fixed;
-  bottom:0;
-  left:0;
-  right:0;
-  height:82px;
-  background:white;
-  display:grid;
-  grid-template-columns:repeat(4,1fr);
-  box-shadow:0 -3px 15px #00000012;
-  z-index:10;
-  padding:5px 7px;
+  position:fixed;bottom:0;left:0;right:0;height:82px;
+  background:white;display:grid;grid-template-columns:repeat(4,1fr);
+  box-shadow:0 -3px 15px #00000012;z-index:10;padding:5px 7px;
 }
 .nav-item{
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  gap:5px;
-  text-decoration:none;
-  color:#9aa5b3;
-  font-size:13px;
-  border-radius:22px;
-  cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:5px;text-decoration:none;
+  color:#9aa5b3;font-size:13px;border-radius:22px;cursor:pointer;
 }
 .nav-item span{font-size:25px}
-.nav-item.active{
-  background:#eeecff;
-  color:#5145df;
-  font-weight:bold;
-}
-footer{
-  text-align:center;
-  color:#888;
-  padding:20px;
-  font-size:12px;
-}
+.nav-item.active{background:#eeecff;color:#5145df;font-weight:bold}
+footer{text-align:center;color:#888;padding:20px;font-size:12px}
 @media(max-width:380px){
   .category{min-height:145px}
   .category h2{font-size:22px}
@@ -191,12 +95,10 @@ footer{
     <span>📍 اضغط لتحديد موقعك</span>
     <small>تغيير</small>
   </button>
-
   <div id="locationResult" class="location-result"></div>
 </section>
 
 <main class="container">
-
 <section class="categories">
 
 <a class="category orange" href="./stores.html?category=مطاعم">
@@ -258,15 +160,12 @@ footer{
 <button id="installButton" class="install">
   📲 تثبيت تطبيق طلبات المدينة
 </button>
-
 </main>
 
-<footer>
-جميع الحقوق محفوظة © طلبات المدينة
-</footer>
+<footer>جميع الحقوق محفوظة © طلبات المدينة</footer>
 
 <nav class="bottom-nav">
-  <a class="nav-item" href="#account" onclick="showNotice('قسم حسابي قيد التجهيز')">
+  <a class="nav-item" href="./account.html">
     <span>👤</span>حسابي
   </a>
 
@@ -289,32 +188,29 @@ function showNotice(text){
 }
 
 function getLocation(){
-  const result = document.getElementById("locationResult");
+  const result=document.getElementById("locationResult");
 
   if(!navigator.geolocation){
-    result.textContent = "جهازك لا يدعم تحديد الموقع";
+    result.textContent="جهازك لا يدعم تحديد الموقع";
     return;
   }
 
-  result.textContent = "جارٍ تحديد موقعك...";
+  result.textContent="جارٍ تحديد موقعك...";
 
   navigator.geolocation.getCurrentPosition(
     function(position){
-      const lat = position.coords.latitude;
-      const lng = position.coords.longitude;
+      const lat=position.coords.latitude;
+      const lng=position.coords.longitude;
 
-      localStorage.setItem("customer_latitude", lat);
-      localStorage.setItem("customer_longitude", lng);
+      localStorage.setItem("customer_latitude",lat);
+      localStorage.setItem("customer_longitude",lng);
 
-      result.textContent = "تم تحديد موقعك بنجاح ✓";
+      result.textContent="تم تحديد موقعك بنجاح ✓";
     },
     function(){
-      result.textContent = "تعذر تحديد الموقع. تحقق من صلاحية الوصول للموقع.";
+      result.textContent="تعذر تحديد الموقع. تحقق من صلاحية الوصول للموقع.";
     },
-    {
-      enableHighAccuracy:true,
-      timeout:15000
-    }
+    {enableHighAccuracy:true,timeout:15000}
   );
 }
 
@@ -327,26 +223,25 @@ if("serviceWorker" in navigator){
   });
 }
 
-let installPrompt = null;
-const installButton = document.getElementById("installButton");
+let installPrompt=null;
+const installButton=document.getElementById("installButton");
 
 window.addEventListener("beforeinstallprompt",function(event){
   event.preventDefault();
-  installPrompt = event;
-  installButton.style.display = "block";
+  installPrompt=event;
+  installButton.style.display="block";
 });
 
 installButton.addEventListener("click",async function(){
-  if(!installPrompt) return;
-
+  if(!installPrompt)return;
   installPrompt.prompt();
   await installPrompt.userChoice;
-  installPrompt = null;
-  installButton.style.display = "none";
+  installPrompt=null;
+  installButton.style.display="none";
 });
 
 window.addEventListener("appinstalled",function(){
-  installButton.style.display = "none";
+  installButton.style.display="none";
 });
 </script>
 
