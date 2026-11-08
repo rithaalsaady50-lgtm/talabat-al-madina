@@ -14,8 +14,10 @@ input{width:100%;padding:14px;border:1px solid #ddd;border-radius:10px;font-size
 .stores{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
 .store{background:white;padding:18px 10px;text-align:center;border-radius:12px;box-shadow:0 2px 8px #00000012}
 .store h3{color:#102a43}
-button{background:#16834a;color:white;border:0;padding:11px 15px;border-radius:8px;font-size:15px}
+button{background:#16834a;color:white;border:0;padding:11px 15px;border-radius:8px;font-size:15px;cursor:pointer}
 .back{background:#102a43;margin-bottom:15px}
+.favorite{background:#f1f1f1;color:#d62950;margin:8px 0;width:100%}
+.favorite.saved{background:#ffe5ec;color:#d62950}
 .message{background:white;padding:15px;border-radius:10px;text-align:center;grid-column:1/-1}
 </style>
 
@@ -43,6 +45,8 @@ const SUPABASE_KEY = "sb_publishable_dTg1TjFIepJqVTycKHe42A_DW0ZwNT_";
 
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+const FAVORITES_KEY = "talabat_madina_favorites";
+
 const params = new URLSearchParams(location.search);
 const selectedCategory = (params.get("category") || "").trim();
 
@@ -50,6 +54,54 @@ document.getElementById("categoryTitle").textContent =
 selectedCategory || "جميع المتاجر";
 
 let allStores = [];
+
+function getFavorites(){
+    try{
+        return JSON.parse(localStorage.getItem(FAVORITES_KEY) || "[]");
+    }catch(error){
+        return [];
+    }
+}
+
+function saveFavorites(items){
+    localStorage.setItem(FAVORITES_KEY, JSON.stringify(items));
+}
+
+function isFavorite(storeId){
+    return getFavorites().some(item =>
+        item.type === "store" && String(item.id) === String(storeId)
+    );
+}
+
+function toggleFavorite(store){
+    let favorites = getFavorites();
+
+    const exists = favorites.some(item =>
+        item.type === "store" && String(item.id) === String(store.id)
+    );
+
+    if(exists){
+        favorites = favorites.filter(item =>
+            !(item.type === "store" && String(item.id) === String(store.id))
+        );
+        saveFavorites(favorites);
+        showStores();
+        alert("تم حذف المتجر من المفضلة");
+        return;
+    }
+
+    favorites.push({
+        id: String(store.id),
+        type: "store",
+        name: store.name,
+        description: store.category || "متجر",
+        addedAt: new Date().toISOString()
+    });
+
+    saveFavorites(favorites);
+    showStores();
+    alert("تمت إضافة المتجر للمفضلة بنجاح ✓");
+}
 
 async function loadStores(){
     const area = document.getElementById("stores");
@@ -104,6 +156,21 @@ function showStores(){
         const category = document.createElement("p");
         category.textContent = store.category || "";
 
+        const favoriteButton = document.createElement("button");
+        favoriteButton.className = "favorite";
+
+        function updateFavoriteButton(){
+            const saved = isFavorite(store.id);
+            favoriteButton.textContent = saved ? "❤️ في المفضلة" : "♥ إضافة للمفضلة";
+            favoriteButton.classList.toggle("saved", saved);
+        }
+
+        updateFavoriteButton();
+
+        favoriteButton.onclick = function(){
+            toggleFavorite(store);
+        };
+
         const button = document.createElement("button");
         button.textContent = "عرض المنتجات";
 
@@ -113,7 +180,7 @@ function showStores(){
             "&store=" + encodeURIComponent(store.name);
         };
 
-        card.append(name,category,button);
+        card.append(name,category,favoriteButton,button);
         area.appendChild(card);
     });
 }
