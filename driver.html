@@ -34,6 +34,17 @@ button.orange{background:#d97706}
 .section-title{color:#102a43;margin:22px 4px 8px}
 .available-card{border-right:5px solid #16834a}
 .small{color:#666;font-size:14px}
+#notificationBanner{
+  display:none;
+  background:#fff7df;
+  border-right:5px solid #d97706;
+  padding:15px;
+  border-radius:10px;
+  margin:12px 0;
+  line-height:1.8;
+}
+#notificationBanner.show{display:block}
+#notificationBanner button{background:#d97706}
 </style>
 </head>
 
@@ -59,8 +70,25 @@ button.orange{background:#d97706}
 <div class="card">
 <h3 id="driverName">أهلاً بك</h3>
 <p>تابع الطلبات المتاحة والطلبات المسندة إليك.</p>
+
 <button class="dark" onclick="loadOrders()">🔄 تحديث الطلبات</button>
+
+<button class="orange" id="notificationButton"
+onclick="enableNotifications()">
+🔔 تفعيل إشعارات الطلبات
+</button>
+
+<p class="small" id="notificationStatus">
+الإشعارات داخل الصفحة تعمل أثناء فتح الحساب.
+</p>
+
 <button class="red" onclick="logout()">تسجيل الخروج</button>
+</div>
+
+<div id="notificationBanner">
+  <b>🔔 وصل طلب جديد!</b>
+  <div id="notificationText"></div>
+  <button onclick="loadOrders()">عرض الطلبات</button>
 </div>
 
 <h3 class="section-title">📦 الطلبات المتاحة</h3>
@@ -81,6 +109,14 @@ const SUPABASE_ANON_KEY =
 "sb_publishable_dTg1TjFIepJqVTycKHe42A_DW0ZwNT_";
 
 const message = document.getElementById("message");
+
+let db = null;
+let currentDriver = null;
+
+let notificationTimer = null;
+let knownAvailableOrderIds = new Set();
+let notificationPermissionAsked = false;
+let checkingNotifications = false;
 
 function showMessage(text){
   message.textContent = text;
@@ -106,9 +142,6 @@ function displayValue(value){
   if(typeof value === "object") return JSON.stringify(value);
   return String(value);
 }
-
-let db = null;
-let currentDriver = null;
 
 function initialize(){
   const key = SUPABASE_ANON_KEY.trim();
@@ -139,12 +172,138 @@ function initialize(){
   return true;
 }
 
+/* تفعيل إشعارات المتصفح */
+async function enableNotifications(){
+  if(!("Notification" in window)){
+    document.getElementById("notificationStatus").textContent =
+      "هذا المتصفح لا يدعم إشعارات المتصفح.";
+    return;
+  }
+
+  try{
+    const permission = await Notification.requestPermission();
+
+    if(permission === "granted"){
+      notificationPermissionAsked = true;
+
+      document.getElementById("notificationStatus").textContent =
+        "تم تفعيل إشعارات المتصفح بنجاح.";
+
+      document.getElementById("notificationButton").textContent =
+        "✓ الإشعارات مفعّلة";
+
+      new Notification("طلبات المدينة",{
+        body:"تم تفعيل إشعارات الطلبات الجديدة."
+      });
+
+    }else{
+      document.getElementById("notificationStatus").textContent =
+        "لم يتم السماح بإشعارات المتصفح. ستبقى التنبيهات داخل الصفحة تعمل.";
+    }
+
+  }catch(error){
+    document.getElementById("notificationStatus").textContent =
+      "تعذر تفعيل الإشعارات على هذا المتصفح.";
+  }
+}
+
+/* إظهار تنبيه الطلب الجديد */
+function showNewOrderNotification(order){
+  const orderId = String(order.order_id);
+
+  document.getElementById("notificationBanner").classList.add("show");
+
+  document.getElementById("notificationText").textContent =
+    "يوجد طلب جديد رقم " + orderId +
+    " بمبلغ " + (order.order_total || "غير محدد") + " د.ع";
+
+  if(
+    "Notification" in window &&
+    Notification.permission === "granted"
+  ){
+    try{
+      new Notification("طلب جديد - طلبات المدينة",{
+        body:
+          "طلب رقم " + orderId +
+          " - المبلغ: " + (order.order_total || "غير محدد") + " د.ع"
+      });
+    }catch(error){
+      console.log("تعذر عرض إشعار المتصفح");
+    }
+  }
+}
+
+/* فحص الطلبات الجديدة */
+async function checkNewAvailableOrders(){
+  if(!currentDriver || !db || checkingNotifications) return;
+
+  checkingNotifications = true;
+
+  try{
+    const {data,error} = await db.rpc(
+      "driver_available_orders"
+    );
+
+    if(error){
+      console.log("خطأ فحص الطلبات:",error.message);
+      return;
+    }
+
+    const orders = data || [];
+    const currentIds = new Set(
+      orders.map(order => String(order.order_id))
+    );
+
+    /* أول فحص يسجل الطلبات الموجودة دون تنبيه */
+    if(knownAvailableOrderIds.size === 0){
+      knownAvailableOrderIds = currentIds;
+      return;
+    }
+
+    const newOrders = orders.filter(order =>
+      !knownAvailableOrderIds.has(String(order.order_id))
+    );
+
+    knownAvailableOrderIds = currentIds;
+
+    if(newOrders.length > 0){
+      showNewOrderNotification(newOrders[0]);
+      await loadAvailableOrders(false);
+    }
+
+  }catch(error){
+    console.log("خطأ فحص الطلبات:",error.message);
+  }finally{
+    checkingNotifications = false;
+  }
+}
+
+/* تشغيل الفحص كل 20 ثانية */
+function startNotificationChecking(){
+  stopNotificationChecking();
+
+  notificationTimer = setInterval(
+    checkNewAvailableOrders,
+    20000
+  );
+}
+
+/* إيقاف الفحص */
+function stopNotificationChecking(){
+  if(notificationTimer){
+    clearInterval(notificationTimer);
+    notificationTimer = null;
+  }
+}
+
+/* تسجيل الدخول */
 async function login(){
   if(!db && !initialize()) return;
 
   const phone = normalizePhone(
     document.getElementById("phone").value
   );
+
   const password =
     document.getElementById("password").value;
 
@@ -187,10 +346,18 @@ async function login(){
 
     document.getElementById("loginBox").classList.add("hidden");
     document.getElementById("accountBox").classList.remove("hidden");
+
     document.getElementById("driverName").textContent =
       "أهلاً " + profile.full_name;
 
+    knownAvailableOrderIds = new Set();
+
     await loadOrders();
+
+    startNotificationChecking();
+
+    document.getElementById("notificationBanner")
+      .classList.remove("show");
 
   }catch(error){
     showMessage("خطأ اتصال: " + error.message);
@@ -200,7 +367,7 @@ async function login(){
 }
 
 /* تحميل الطلبات المتاحة */
-async function loadAvailableOrders(){
+async function loadAvailableOrders(updateKnownIds = true){
   const box = document.getElementById("availableOrders");
 
   box.innerHTML =
@@ -216,6 +383,12 @@ async function loadAvailableOrders(){
         "<div class='card'>تعذر تحميل الطلبات المتاحة: " +
         escapeHTML(error.message) + "</div>";
       return;
+    }
+
+    if(updateKnownIds){
+      knownAvailableOrderIds = new Set(
+        (data || []).map(order => String(order.order_id))
+      );
     }
 
     if(!data || data.length === 0){
@@ -373,7 +546,7 @@ async function loadOrders(){
   box.innerHTML =
     "<div class='card'>جارٍ تحميل الطلبات المسندة...</div>";
 
-  await loadAvailableOrders();
+  await loadAvailableOrders(true);
 
   try{
     const {data,error} = await db
@@ -492,15 +665,24 @@ async function loadOrders(){
   }
 }
 
+/* تسجيل الخروج */
 async function logout(){
+  stopNotificationChecking();
+
   if(db) await db.auth.signOut();
 
   currentDriver = null;
+  knownAvailableOrderIds = new Set();
 
   document.getElementById("accountBox").classList.add("hidden");
   document.getElementById("loginBox").classList.remove("hidden");
+
   document.getElementById("orders").innerHTML = "";
   document.getElementById("availableOrders").innerHTML = "";
+
+  document.getElementById("notificationBanner")
+    .classList.remove("show");
+
   document.getElementById("password").value = "";
 
   showMessage("تم تسجيل الخروج");
