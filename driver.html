@@ -35,16 +35,17 @@ button.orange{background:#d97706}
 .available-card{border-right:5px solid #16834a}
 .small{color:#666;font-size:14px}
 #notificationBanner{
-  display:none;
-  background:#fff7df;
-  border-right:5px solid #d97706;
-  padding:15px;
-  border-radius:10px;
-  margin:12px 0;
-  line-height:1.8;
+display:none;
+background:#fff7df;
+border-right:5px solid #d97706;
+padding:15px;
+border-radius:10px;
+margin:12px 0;
+line-height:1.8;
 }
 #notificationBanner.show{display:block}
 #notificationBanner button{background:#d97706}
+#notificationText{font-weight:bold;margin:8px 0}
 </style>
 </head>
 
@@ -79,20 +80,21 @@ onclick="enableNotifications()">
 </button>
 
 <p class="small" id="notificationStatus">
-الإشعارات داخل الصفحة تعمل أثناء فتح الحساب.
+التنبيهات الصوتية والداخلية تعمل أثناء فتح الحساب.
 </p>
 
 <button class="red" onclick="logout()">تسجيل الخروج</button>
 </div>
 
 <div id="notificationBanner">
-  <b>🔔 وصل طلب جديد!</b>
-  <div id="notificationText"></div>
-  <button onclick="loadOrders()">عرض الطلبات</button>
+<b>🔔 وصل طلب جديد!</b>
+<div id="notificationText"></div>
+<button onclick="loadOrders()">عرض الطلبات</button>
+<button class="dark" onclick="hideNotification()">إخفاء التنبيه</button>
 </div>
 
 <h3 class="section-title">📦 الطلبات المتاحة</h3>
-<p class="small">تظهر هنا الطلبات التي لم يستلمها أي موصّل بعد.</p>
+<p class="small">تظهر هنا الطلبات التي وافق عليها المدير ولم يستلمها أي موصّل.</p>
 <div id="availableOrders"></div>
 
 <h3 class="section-title">🚚 الطلبات المسندة إليك</h3>
@@ -112,11 +114,11 @@ const message = document.getElementById("message");
 
 let db = null;
 let currentDriver = null;
-
 let notificationTimer = null;
 let knownAvailableOrderIds = new Set();
-let notificationPermissionAsked = false;
+let hasNotificationBaseline = false;
 let checkingNotifications = false;
+let audioContext = null;
 
 function showMessage(text){
   message.textContent = text;
@@ -172,11 +174,72 @@ function initialize(){
   return true;
 }
 
+/* تهيئة الصوت بعد تفاعل المستخدم */
+function unlockAudio(){
+  try{
+    const AudioContextClass =
+      window.AudioContext || window.webkitAudioContext;
+
+    if(!AudioContextClass) return;
+
+    if(!audioContext){
+      audioContext = new AudioContextClass();
+    }
+
+    if(audioContext.state === "suspended"){
+      audioContext.resume();
+    }
+  }catch(error){
+    console.log("الصوت غير متاح:",error.message);
+  }
+}
+
+/* تشغيل صوت تنبيه قصير */
+function playAlertSound(){
+  try{
+    if(!audioContext) return;
+
+    if(audioContext.state === "suspended"){
+      audioContext.resume();
+    }
+
+    const now = audioContext.currentTime;
+
+    [0,0.25].forEach((delay,index)=>{
+      const oscillator = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+
+      oscillator.type = "sine";
+      oscillator.frequency.value = index === 0 ? 880 : 1100;
+
+      gain.gain.setValueAtTime(0.0001,now + delay);
+      gain.gain.exponentialRampToValueAtTime(
+        0.18,now + delay + 0.02
+      );
+      gain.gain.exponentialRampToValueAtTime(
+        0.0001,now + delay + 0.18
+      );
+
+      oscillator.connect(gain);
+      gain.connect(audioContext.destination);
+
+      oscillator.start(now + delay);
+      oscillator.stop(now + delay + 0.2);
+    });
+
+  }catch(error){
+    console.log("تعذر تشغيل صوت التنبيه");
+  }
+}
+
 /* تفعيل إشعارات المتصفح */
 async function enableNotifications(){
+  unlockAudio();
+
   if(!("Notification" in window)){
     document.getElementById("notificationStatus").textContent =
-      "هذا المتصفح لا يدعم إشعارات المتصفح.";
+      "المتصفح لا يدعم إشعارات النظام. التنبيهات داخل الصفحة والصوت تبقى متاحة.";
+    playAlertSound();
     return;
   }
 
@@ -184,10 +247,8 @@ async function enableNotifications(){
     const permission = await Notification.requestPermission();
 
     if(permission === "granted"){
-      notificationPermissionAsked = true;
-
       document.getElementById("notificationStatus").textContent =
-        "تم تفعيل إشعارات المتصفح بنجاح.";
+        "إشعارات المتصفح مفعّلة. التنبيهات تعمل أثناء فتح الصفحة.";
 
       document.getElementById("notificationButton").textContent =
         "✓ الإشعارات مفعّلة";
@@ -196,15 +257,23 @@ async function enableNotifications(){
         body:"تم تفعيل إشعارات الطلبات الجديدة."
       });
 
+      playAlertSound();
+
     }else{
       document.getElementById("notificationStatus").textContent =
-        "لم يتم السماح بإشعارات المتصفح. ستبقى التنبيهات داخل الصفحة تعمل.";
+        "لم يتم السماح بإشعارات المتصفح. التنبيهات داخل الصفحة والصوت تعمل عند فتح الحساب.";
     }
 
   }catch(error){
     document.getElementById("notificationStatus").textContent =
-      "تعذر تفعيل الإشعارات على هذا المتصفح.";
+      "تعذر تفعيل إشعارات المتصفح. التنبيهات داخل الصفحة تبقى متاحة.";
   }
+}
+
+/* إخفاء التنبيه */
+function hideNotification(){
+  document.getElementById("notificationBanner")
+    .classList.remove("show");
 }
 
 /* إظهار تنبيه الطلب الجديد */
@@ -216,6 +285,8 @@ function showNewOrderNotification(order){
   document.getElementById("notificationText").textContent =
     "يوجد طلب جديد رقم " + orderId +
     " بمبلغ " + (order.order_total || "غير محدد") + " د.ع";
+
+  playAlertSound();
 
   if(
     "Notification" in window &&
@@ -250,13 +321,15 @@ async function checkNewAvailableOrders(){
     }
 
     const orders = data || [];
+
     const currentIds = new Set(
       orders.map(order => String(order.order_id))
     );
 
-    /* أول فحص يسجل الطلبات الموجودة دون تنبيه */
-    if(knownAvailableOrderIds.size === 0){
+    /* تسجيل أول نتيجة حتى لو كانت فارغة */
+    if(!hasNotificationBaseline){
       knownAvailableOrderIds = currentIds;
+      hasNotificationBaseline = true;
       return;
     }
 
@@ -298,6 +371,8 @@ function stopNotificationChecking(){
 
 /* تسجيل الدخول */
 async function login(){
+  unlockAudio();
+
   if(!db && !initialize()) return;
 
   const phone = normalizePhone(
@@ -351,13 +426,13 @@ async function login(){
       "أهلاً " + profile.full_name;
 
     knownAvailableOrderIds = new Set();
+    hasNotificationBaseline = false;
 
     await loadOrders();
 
     startNotificationChecking();
 
-    document.getElementById("notificationBanner")
-      .classList.remove("show");
+    hideNotification();
 
   }catch(error){
     showMessage("خطأ اتصال: " + error.message);
@@ -385,19 +460,22 @@ async function loadAvailableOrders(updateKnownIds = true){
       return;
     }
 
+    const available = data || [];
+
     if(updateKnownIds){
       knownAvailableOrderIds = new Set(
-        (data || []).map(order => String(order.order_id))
+        available.map(order => String(order.order_id))
       );
+      hasNotificationBaseline = true;
     }
 
-    if(!data || data.length === 0){
+    if(available.length === 0){
       box.innerHTML =
         "<div class='card'>لا توجد طلبات متاحة حالياً.</div>";
       return;
     }
 
-    box.innerHTML = data.map(order => {
+    box.innerHTML = available.map(order => {
       const orderId = String(order.order_id || "")
         .replace(/\D/g,"");
 
@@ -442,7 +520,7 @@ async function loadAvailableOrders(updateKnownIds = true){
   }
 }
 
-/* قبول الطلب بشكل آمن */
+/* قبول الطلب */
 async function claimOrder(orderId,button){
   if(!currentDriver) return;
 
@@ -673,6 +751,7 @@ async function logout(){
 
   currentDriver = null;
   knownAvailableOrderIds = new Set();
+  hasNotificationBaseline = false;
 
   document.getElementById("accountBox").classList.add("hidden");
   document.getElementById("loginBox").classList.remove("hidden");
@@ -680,13 +759,19 @@ async function logout(){
   document.getElementById("orders").innerHTML = "";
   document.getElementById("availableOrders").innerHTML = "";
 
-  document.getElementById("notificationBanner")
-    .classList.remove("show");
+  hideNotification();
 
   document.getElementById("password").value = "";
 
   showMessage("تم تسجيل الخروج");
 }
+
+/* عند الرجوع إلى الصفحة نفحص الطلبات فوراً */
+document.addEventListener("visibilitychange",()=>{
+  if(!document.hidden && currentDriver){
+    checkNewAvailableOrders();
+  }
+});
 
 initialize();
 </script>
