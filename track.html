@@ -5,84 +5,23 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>متابعة الطلب - طلبات المدينة</title>
-
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box}
-body{
- margin:0;
- font-family:Arial,sans-serif;
- background:#f3f5f8;
- color:#222;
-}
-header{
- background:#102a43;
- color:white;
- text-align:center;
- padding:22px;
-}
-.container{
- max-width:600px;
- margin:auto;
- padding:18px;
-}
-.card{
- background:white;
- padding:20px;
- border-radius:14px;
- margin-top:18px;
- box-shadow:0 2px 8px #00000012;
-}
-input{
- width:100%;
- padding:14px;
- border:1px solid #ccc;
- border-radius:8px;
- font-size:16px;
- margin:10px 0;
-}
-button{
- width:100%;
- border:0;
- padding:14px;
- border-radius:8px;
- color:white;
- background:#16834a;
- font-size:16px;
- cursor:pointer;
-}
-.status{
- padding:15px;
- background:#e8f5ed;
- color:#16834a;
- border-radius:10px;
- text-align:center;
- font-weight:bold;
- font-size:19px;
- margin:15px 0;
-}
-.info{
- line-height:2;
- border-bottom:1px solid #eee;
- padding:10px 0;
-}
-.error{
- color:#b42318;
- background:#fff0f0;
- padding:12px;
- border-radius:8px;
- margin-top:12px;
-}
-.hidden{display:none}
-.small{
- color:#666;
- font-size:13px;
- text-align:center;
-}
+body{margin:0;font-family:Arial;background:#f3f5f8;color:#222}
+header{background:#102a43;color:white;text-align:center;padding:22px}
+.container{max-width:600px;margin:auto;padding:18px}
+.card{background:white;padding:20px;border-radius:14px;margin-top:18px;box-shadow:0 2px 8px #00000012}
+input,button{width:100%;padding:14px;border-radius:8px;font-size:16px;margin:9px 0}
+input{border:1px solid #ccc}
+button{border:0;background:#16834a;color:white;cursor:pointer}
+button:disabled{opacity:.6}
+.status{padding:15px;background:#e8f5ed;color:#16834a;border-radius:10px;text-align:center;font-weight:bold;font-size:19px;margin:15px 0}
+.info{line-height:2;border-bottom:1px solid #eee;padding:10px 0}
+.error{color:#b42318;background:#fff0f0;padding:12px;border-radius:8px;margin-top:12px}
+.small{color:#666;font-size:13px;text-align:center}
 </style>
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-
 <body>
 
 <header>
@@ -91,27 +30,19 @@ button{
 </header>
 
 <div class="container">
-
 <div class="card">
 <h2>متابعة الطلب</h2>
-<p>أدخل رقم المتابعة الذي ظهر لك بعد تأكيد الطلب.</p>
+<p>أدخل رقم الطلب ورقم هاتفك المسجل عند الطلب.</p>
 
-<input
- id="trackingToken"
- type="text"
- placeholder="رقم متابعة الطلب"
- autocomplete="off"
->
+<input id="orderId" type="number" min="1" placeholder="رقم الطلب مثال: 22">
 
-<button id="searchButton" onclick="trackOrder()">
-متابعة الطلب
-</button>
+<input id="customerPhone" type="tel" placeholder="رقم هاتف الزبون" autocomplete="tel">
+
+<button id="searchButton" onclick="trackOrder()">متابعة الطلب</button>
 
 <div id="result"></div>
 </div>
-
 <p class="small">طلبات المدينة © جميع الحقوق محفوظة</p>
-
 </div>
 
 <script>
@@ -122,118 +53,114 @@ const SUPABASE_KEY =
 "sb_publishable_dTg1TjFIepJqVTycKHe42A_DW0ZwNT_";
 
 const db = supabase.createClient(
- SUPABASE_URL,
- SUPABASE_KEY.trim()
+SUPABASE_URL,
+SUPABASE_KEY.trim()
 );
 
-const input = document.getElementById("trackingToken");
+const orderIdInput = document.getElementById("orderId");
+const phoneInput = document.getElementById("customerPhone");
 const result = document.getElementById("result");
 const searchButton = document.getElementById("searchButton");
 
-const params = new URLSearchParams(location.search);
-const urlToken = params.get("token");
-
-if(urlToken){
- input.value = urlToken;
- trackOrder();
-}
-
-function addInfo(parent,label,value){
-
- const row = document.createElement("div");
- row.className = "info";
-
- const strong = document.createElement("strong");
- strong.textContent = label + ": ";
-
- const span = document.createElement("span");
- span.textContent = value;
-
- row.append(strong,span);
- parent.appendChild(row);
-}
-
 function formatMoney(value){
- return Number(value || 0).toLocaleString("en-US") + " دينار";
+return Number(value || 0).toLocaleString("en-US") + " دينار";
 }
 
 function formatDate(value){
- if(!value) return "غير متوفر";
+if(!value) return "غير متوفر";
+return new Date(value).toLocaleString("ar-IQ");
+}
 
- return new Date(value).toLocaleString("ar-IQ");
+function addInfo(parent,label,value){
+const row = document.createElement("div");
+row.className = "info";
+
+const strong = document.createElement("strong");
+strong.textContent = label + ": ";
+
+const span = document.createElement("span");
+span.textContent = value ?? "غير متوفر";
+
+row.append(strong,span);
+parent.appendChild(row);
 }
 
 async function trackOrder(){
 
- const token = input.value.trim();
+const orderId = orderIdInput.value.trim();
+const phone = phoneInput.value.trim();
 
- result.replaceChildren();
+result.replaceChildren();
+result.className = "";
 
- if(!token){
-  result.textContent = "يرجى إدخال رقم المتابعة.";
-  result.className = "error";
-  return;
- }
+if(!orderId || !/^[0-9]+$/.test(orderId) || Number(orderId) <= 0){
+result.textContent = "يرجى إدخال رقم طلب صحيح.";
+result.className = "error";
+return;
+}
 
- searchButton.disabled = true;
- searchButton.textContent = "جاري البحث...";
+if(!phone || phone.replace(/\D/g,"").length < 7){
+result.textContent = "يرجى إدخال رقم الهاتف المسجل بالطلب.";
+result.className = "error";
+return;
+}
 
- try{
+searchButton.disabled = true;
+searchButton.textContent = "جارٍ البحث...";
 
-  const {data,error} = await db.rpc(
-   "track_order",
-   {p_tracking_token:token}
-  );
+try{
 
-  if(error) throw error;
+const {data,error} = await db.rpc(
+"track_order_by_number",
+{
+p_order_id: Number(orderId),
+p_customer_phone: phone
+}
+);
 
-  if(!data || data.length === 0){
-   result.textContent =
-    "لم يتم العثور على الطلب. تأكد من رقم المتابعة.";
-   result.className = "error";
-   return;
-  }
+if(error) throw error;
 
-  const order = data[0];
+if(!data || data.length === 0){
+result.textContent =
+"لم يتم العثور على الطلب. تأكد من رقم الطلب ورقم الهاتف.";
+result.className = "error";
+return;
+}
 
-  const card = document.createElement("div");
-  card.className = "card";
+const order = data[0];
 
-  const heading = document.createElement("h3");
-  heading.textContent = "تفاصيل متابعة الطلب";
+const card = document.createElement("div");
+card.className = "card";
 
-  const status = document.createElement("div");
-  status.className = "status";
-  status.textContent = order.order_status;
+const heading = document.createElement("h3");
+heading.textContent = "تفاصيل طلبك";
 
-  card.append(heading,status);
+const status = document.createElement("div");
+status.className = "status";
+status.textContent = order.order_status;
 
-  addInfo(card,"حالة الطلب",order.order_status);
-  addInfo(card,"المجموع النهائي",formatMoney(order.order_total));
-  addInfo(card,"تاريخ الطلب",formatDate(order.order_date));
+card.append(heading,status);
 
-  const note = document.createElement("p");
-  note.className = "small";
-  note.textContent =
-   "يتم تحديث حالة الطلب عند تغييرها من لوحة المدير.";
+addInfo(card,"رقم الطلب",order.order_id);
+addInfo(card,"حالة الطلب",order.order_status);
+addInfo(card,"المجموع النهائي",formatMoney(order.order_total));
+addInfo(card,"تاريخ الطلب",formatDate(order.order_date));
 
-  card.appendChild(note);
+const note = document.createElement("p");
+note.className = "small";
+note.textContent = "تتحدث حالة الطلب عند تغييرها من المدير أو الموصّل.";
 
-  result.appendChild(card);
-  result.className = "";
+card.appendChild(note);
+result.appendChild(card);
 
- }catch(error){
-
-  console.error(error);
-  result.textContent =
-   "تعذر متابعة الطلب: " + error.message;
-  result.className = "error";
-
- }finally{
-
-  searchButton.disabled = false;
-  searchButton.textContent = "متابعة الطلب";
- }
+}catch(error){
+console.error(error);
+result.textContent = "تعذر متابعة الطلب: " + error.message;
+result.className = "error";
+}finally{
+searchButton.disabled = false;
+searchButton.textContent = "متابعة الطلب";
+}
 }
 </script>
 
