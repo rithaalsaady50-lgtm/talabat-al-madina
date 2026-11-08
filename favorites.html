@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>المفضلة - طلبات المدينة</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial;background:#f3f5f8;color:#222;padding-bottom:30px}
+header{background:#5145df;color:white;text-align:center;padding:20px}
+main{max-width:650px;margin:auto;padding:15px}
+.tabs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:15px}
+.tab{padding:13px;border:0;border-radius:10px;background:#ddd;font-size:16px}
+.tab.active{background:#5145df;color:white}
+.item{background:white;border-radius:13px;padding:15px;margin:10px 0;display:flex;align-items:center;gap:12px}
+.item-icon{font-size:35px}
+.item-info{flex:1}
+.item-info h3{margin:0 0 7px}
+.item-info p{margin:0;color:#777;font-size:13px}
+.remove{background:#df174a;color:white;border:0;border-radius:8px;padding:10px}
+.empty{text-align:center;color:#777;background:white;padding:25px;border-radius:12px}
+.back{display:block;text-align:center;margin:20px;color:#5145df;text-decoration:none}
+.add-box{background:white;padding:15px;border-radius:12px;margin-bottom:15px}
+input,select{width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;margin:7px 0;font-size:15px}
+.add{width:100%;padding:13px;background:#16834a;color:white;border:0;border-radius:9px;font-size:16px}
+</style>
+</head>
+<body>
+
+<header>
+<h2>♥ المفضلة</h2>
+<p>متاجرك ومنتجاتك المفضلة</p>
+</header>
+
+<main>
+
+<div class="add-box">
+<h3>إضافة إلى المفضلة</h3>
+<select id="type">
+<option value="store">متجر</option>
+<option value="product">منتج</option>
+</select>
+<input id="itemName" placeholder="اسم المتجر أو المنتج">
+<input id="itemDescription" placeholder="وصف مختصر (اختياري)">
+<button class="add" onclick="addFavorite()">♥ إضافة للمفضلة</button>
+<p id="message"></p>
+</div>
+
+<div class="tabs">
+<button class="tab active" id="storesTab" onclick="showType('store')">المتاجر</button>
+<button class="tab" id="productsTab" onclick="showType('product')">المنتجات</button>
+</div>
+
+<div id="favoritesList"></div>
+
+<a class="back" href="./index.html">العودة إلى الرئيسية</a>
+
+</main>
+
+<script>
+const STORAGE_KEY='talabat_madina_favorites';
+let currentType='store';
+
+function getFavorites(){
+  try{
+    return JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
+  }catch(e){
+    return [];
+  }
+}
+
+function saveFavorites(items){
+  localStorage.setItem(STORAGE_KEY,JSON.stringify(items));
+}
+
+function addFavorite(){
+  const type=document.getElementById('type').value;
+  const name=document.getElementById('itemName').value.trim();
+  const description=document.getElementById('itemDescription').value.trim();
+  const message=document.getElementById('message');
+
+  if(!name){
+    message.textContent='اكتب اسم المتجر أو المنتج أولاً';
+    return;
+  }
+
+  const items=getFavorites();
+
+  const exists=items.some(item=>
+    item.type===type && item.name.toLowerCase()===name.toLowerCase()
+  );
+
+  if(exists){
+    message.textContent='هذا العنصر موجود بالمفضلة بالفعل';
+    return;
+  }
+
+  items.push({
+    id:Date.now(),
+    type:type,
+    name:name,
+    description:description
+  });
+
+  saveFavorites(items);
+
+  document.getElementById('itemName').value='';
+  document.getElementById('itemDescription').value='';
+  message.textContent='تمت الإضافة للمفضلة بنجاح ✓';
+
+  showType(type);
+}
+
+function showType(type){
+  currentType=type;
+
+  document.getElementById('storesTab').classList.toggle('active',type==='store');
+  document.getElementById('productsTab').classList.toggle('active',type==='product');
+
+  const list=document.getElementById('favoritesList');
+  const items=getFavorites().filter(item=>item.type===type);
+
+  if(items.length===0){
+    list.innerHTML='<div class="empty">لا توجد عناصر في المفضلة حالياً ♥</div>';
+    return;
+  }
+
+  list.innerHTML='';
+
+  items.forEach(item=>{
+    const card=document.createElement('div');
+    card.className='item';
+
+    const icon=document.createElement('div');
+    icon.className='item-icon';
+    icon.textContent=type==='store'?'🏪':'🛍️';
+
+    const info=document.createElement('div');
+    info.className='item-info';
+
+    const title=document.createElement('h3');
+    title.textContent=item.name;
+
+    const description=document.createElement('p');
+    description.textContent=item.description||'ضمن المفضلة';
+
+    info.append(title,description);
+
+    const remove=document.createElement('button');
+    remove.className='remove';
+    remove.textContent='حذف';
+    remove.onclick=()=>deleteFavorite(item.id);
+
+    card.append(icon,info,remove);
+    list.appendChild(card);
+  });
+}
+
+function deleteFavorite(id){
+  const items=getFavorites().filter(item=>item.id!==id);
+  saveFavorites(items);
+  showType(currentType);
+}
+
+showType('store');
+</script>
+
+</body>
+</html>
