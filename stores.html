@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -15,6 +16,7 @@ input{width:100%;padding:14px;border:1px solid #ddd;border-radius:10px;font-size
 .store{background:white;padding:18px 10px;text-align:center;border-radius:12px;box-shadow:0 2px 8px #00000012}
 .store h3{color:#102a43}
 button{background:#16834a;color:white;border:0;padding:11px 15px;border-radius:8px;font-size:15px;cursor:pointer}
+button:disabled{opacity:.6}
 .back{background:#102a43;margin-bottom:15px}
 .favorite{background:#f1f1f1;color:#d62950;margin:8px 0;width:100%}
 .favorite.saved{background:#ffe5ec;color:#d62950}
@@ -25,167 +27,233 @@ button{background:#16834a;color:white;border:0;padding:11px 15px;border-radius:8
 </head>
 
 <body>
+
 <header>
 <h2>طلبات المدينة</h2>
 <p>اختر المتجر الذي تريد الطلب منه</p>
 </header>
 
 <div class="container">
+
 <button class="back" onclick="location.href='index.html'">رجوع للأقسام</button>
+
 <h3 id="categoryTitle">المتاجر</h3>
+
 <input id="search" placeholder="ابحث عن متجر..." oninput="showStores()">
+
 <div class="stores" id="stores">
 <div class="message">جاري تحميل المتاجر...</div>
 </div>
+
 </div>
 
 <script>
-const SUPABASE_URL = "https://iombzxymujzetguqdhkq.supabase.co";
-const SUPABASE_KEY = "sb_publishable_dTg1TjFIepJqVTycKHe42A_DW0ZwNT_";
+const SUPABASE_URL="https://iombzxymujzetguqdhkq.supabase.co";
+const SUPABASE_KEY="sb_publishable_dTg1TjFIepJqVTycKHe42A_DW0ZwNT_";
 
-const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const db=window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
+);
 
-const FAVORITES_KEY = "talabat_madina_favorites";
+const params=new URLSearchParams(location.search);
+const selectedCategory=(params.get("category")||"").trim();
 
-const params = new URLSearchParams(location.search);
-const selectedCategory = (params.get("category") || "").trim();
+document.getElementById("categoryTitle").textContent=
+selectedCategory||"جميع المتاجر";
 
-document.getElementById("categoryTitle").textContent =
-selectedCategory || "جميع المتاجر";
+let allStores=[];
+let currentUser=null;
+let favoriteStores=[];
 
-let allStores = [];
+async function loadFavorites(){
+  const {data,error}=await db
+    .from("favorites")
+    .select("id,item_id,item_name")
+    .eq("user_id",currentUser.id)
+    .eq("item_type","store");
 
-function getFavorites(){
-    try{
-        return JSON.parse(localStorage.getItem(FAVORITES_KEY) || "[]");
-    }catch(error){
-        return [];
-    }
-}
+  if(error) throw error;
 
-function saveFavorites(items){
-    localStorage.setItem(FAVORITES_KEY, JSON.stringify(items));
+  favoriteStores=data||[];
 }
 
 function isFavorite(storeId){
-    return getFavorites().some(item =>
-        item.type === "store" && String(item.id) === String(storeId)
-    );
+  return favoriteStores.some(item=>
+    String(item.item_id)===String(storeId)
+  );
 }
 
-function toggleFavorite(store){
-    let favorites = getFavorites();
+async function toggleFavorite(store,button){
+  if(!currentUser){
+    alert("يرجى تسجيل الدخول أولاً حتى تحفظ المتاجر في المفضلة");
+    location.href="./account.html";
+    return;
+  }
 
-    const exists = favorites.some(item =>
-        item.type === "store" && String(item.id) === String(store.id)
+  button.disabled=true;
+
+  try{
+    const existing=favoriteStores.find(item=>
+      String(item.item_id)===String(store.id)
     );
 
-    if(exists){
-        favorites = favorites.filter(item =>
-            !(item.type === "store" && String(item.id) === String(store.id))
-        );
-        saveFavorites(favorites);
-        showStores();
-        alert("تم حذف المتجر من المفضلة");
-        return;
+    if(existing){
+      const {error}=await db
+        .from("favorites")
+        .delete()
+        .eq("id",existing.id)
+        .eq("user_id",currentUser.id);
+
+      if(error) throw error;
+
+      favoriteStores=favoriteStores.filter(item=>
+        item.id!==existing.id
+      );
+
+      alert("تم حذف المتجر من المفضلة");
+    }else{
+      const {data,error}=await db
+        .from("favorites")
+        .insert({
+          user_id:currentUser.id,
+          item_type:"store",
+          item_id:String(store.id),
+          item_name:store.name,
+          item_description:store.category||"متجر"
+        })
+        .select("id,item_id,item_name")
+        .single();
+
+      if(error) throw error;
+
+      favoriteStores.push(data);
+
+      alert("تمت إضافة المتجر للمفضلة بنجاح ✓");
     }
 
-    favorites.push({
-        id: String(store.id),
-        type: "store",
-        name: store.name,
-        description: store.category || "متجر",
-        addedAt: new Date().toISOString()
-    });
-
-    saveFavorites(favorites);
     showStores();
-    alert("تمت إضافة المتجر للمفضلة بنجاح ✓");
+
+  }catch(error){
+    alert("تعذر تحديث المفضلة: "+error.message);
+    console.error(error);
+  }
+
+  button.disabled=false;
 }
 
 async function loadStores(){
-    const area = document.getElementById("stores");
+  const area=document.getElementById("stores");
 
-    try{
-        let query = db.from("stores")
-            .select("id,name,category,is_active")
-            .eq("is_active", true)
-            .order("name");
+  try{
+    const {data:userData,error:userError}=await db.auth.getUser();
 
-        if(selectedCategory){
-            query = query.eq("category", selectedCategory);
-        }
+    if(userError) throw userError;
 
-        const {data,error} = await query;
+    currentUser=userData.user;
 
-        if(error) throw error;
-
-        allStores = data || [];
-        showStores();
-
-    }catch(error){
-        area.innerHTML =
-        '<div class="message">تعذر تحميل المتاجر. تأكد من إعدادات قاعدة البيانات والاتصال.</div>';
-        console.error(error);
+    if(currentUser){
+      await loadFavorites();
     }
+
+    let query=db.from("stores")
+      .select("id,name,category,is_active")
+      .eq("is_active",true)
+      .order("name");
+
+    if(selectedCategory){
+      query=query.eq("category",selectedCategory);
+    }
+
+    const {data,error}=await query;
+
+    if(error) throw error;
+
+    allStores=data||[];
+    showStores();
+
+  }catch(error){
+    area.innerHTML=
+      '<div class="message">تعذر تحميل البيانات: '+
+      escapeHTML(error.message)+'</div>';
+
+    console.error(error);
+  }
+}
+
+function escapeHTML(value){
+  return String(value).replace(/[&<>"']/g,function(char){
+    return {
+      "&":"&amp;",
+      "<":"&lt;",
+      ">":"&gt;",
+      '"':"&quot;",
+      "'":"&#39;"
+    }[char];
+  });
 }
 
 function showStores(){
-    const search = document.getElementById("search").value.trim();
-    const area = document.getElementById("stores");
+  const search=document.getElementById("search").value.trim();
+  const area=document.getElementById("stores");
 
-    const filtered = allStores.filter(store =>
-        (store.name || "").includes(search)
-    );
+  const filtered=allStores.filter(store=>
+    (store.name||"").includes(search)
+  );
 
-    area.innerHTML = "";
+  area.innerHTML="";
 
-    if(filtered.length === 0){
-        area.innerHTML =
-        '<div class="message">لا توجد متاجر مفتوحة بهذا القسم حالياً.</div>';
-        return;
+  if(filtered.length===0){
+    area.innerHTML=
+      '<div class="message">لا توجد متاجر مفتوحة بهذا القسم حالياً.</div>';
+    return;
+  }
+
+  filtered.forEach(store=>{
+    const card=document.createElement("div");
+    card.className="store";
+
+    const name=document.createElement("h3");
+    name.textContent=store.name;
+
+    const category=document.createElement("p");
+    category.textContent=store.category||"";
+
+    const favoriteButton=document.createElement("button");
+    favoriteButton.className="favorite";
+
+    function updateFavoriteButton(){
+      const saved=currentUser&&isFavorite(store.id);
+
+      favoriteButton.textContent=saved?
+        "❤️ في المفضلة":
+        "♥ إضافة للمفضلة";
+
+      favoriteButton.classList.toggle("saved",!!saved);
     }
 
-    filtered.forEach(store => {
-        const card = document.createElement("div");
-        card.className = "store";
+    updateFavoriteButton();
 
-        const name = document.createElement("h3");
-        name.textContent = store.name;
+    favoriteButton.onclick=function(){
+      toggleFavorite(store,favoriteButton);
+    };
 
-        const category = document.createElement("p");
-        category.textContent = store.category || "";
+    const button=document.createElement("button");
+    button.textContent="عرض المنتجات";
 
-        const favoriteButton = document.createElement("button");
-        favoriteButton.className = "favorite";
+    button.onclick=function(){
+      location.href=
+        "products.html?storeId="+encodeURIComponent(store.id)+
+        "&store="+encodeURIComponent(store.name);
+    };
 
-        function updateFavoriteButton(){
-            const saved = isFavorite(store.id);
-            favoriteButton.textContent = saved ? "❤️ في المفضلة" : "♥ إضافة للمفضلة";
-            favoriteButton.classList.toggle("saved", saved);
-        }
-
-        updateFavoriteButton();
-
-        favoriteButton.onclick = function(){
-            toggleFavorite(store);
-        };
-
-        const button = document.createElement("button");
-        button.textContent = "عرض المنتجات";
-
-        button.onclick = function(){
-            location.href =
-            "products.html?storeId=" + encodeURIComponent(store.id) +
-            "&store=" + encodeURIComponent(store.name);
-        };
-
-        card.append(name,category,favoriteButton,button);
-        area.appendChild(card);
-    });
+    card.append(name,category,favoriteButton,button);
+    area.appendChild(card);
+  });
 }
 
 loadStores();
 </script>
+
 </body>
 </html>
