@@ -7,7 +7,13 @@
 <title>طلبات المدينة</title>
 <meta name="description" content="طلبات المدينة - كل احتياجاتك توصلك لحد باب البيت">
 <meta name="theme-color" content="#5145df">
-<link rel="manifest" href="./manifest.json">
+
+<!-- ربط ملف التطبيق والشعار الجديد -->
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="./iconicon-192-v2.png">
+<link rel="apple-touch-icon" href="./iconicon-192-v2.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="طلبات المدينة">
 
 <style>
 *{box-sizing:border-box}
@@ -126,6 +132,7 @@ body{
   border:0;
   border-radius:12px;
   font-size:17px;
+  cursor:pointer;
 }
 .bottom-nav{
   position:fixed;
@@ -190,94 +197,89 @@ footer{
 
 <main class="container">
 
-  <section class="categories">
+<section class="categories">
 
-    <!-- المطاعم مرتبطة بتصنيف قاعدة البيانات -->
-    <a class="category orange" href="./stores.html?category=مطاعم">
-      <div class="category-content">
-        <h2>مطعم</h2>
-        <p>برغر - شاورما - بيتزا - كل ما تشتهي</p>
-      </div>
-      <div class="category-icon">🍴</div>
-      <div class="arrow">‹</div>
-    </a>
+<a class="category orange" href="./stores.html?category=مطاعم">
+  <div class="category-content">
+    <h2>مطعم</h2>
+    <p>برغر - شاورما - بيتزا - كل ما تشتهي</p>
+  </div>
+  <div class="category-icon">🍴</div>
+  <div class="arrow">‹</div>
+</a>
 
-    <a class="category purple" href="./stores.html">
-      <div class="category-content">
-        <h2>كوزمتك واللبسة</h2>
-        <p>عناية - ملابس - عطور - إكسسوارات - مكياج</p>
-      </div>
-      <div class="category-icon">🌸</div>
-      <div class="arrow">‹</div>
-    </a>
+<a class="category purple" href="./stores.html?category=كوزمتك واللبسة">
+  <div class="category-content">
+    <h2>كوزمتك واللبسة</h2>
+    <p>عناية - ملابس - عطور - إكسسوارات - مكياج</p>
+  </div>
+  <div class="category-icon">🌸</div>
+  <div class="arrow">‹</div>
+</a>
 
-    <a class="category green" href="./stores.html">
-      <div class="category-content">
-        <h2>ماركت</h2>
-        <p>بقالة - خضار - غذائية منزلية - أطفال</p>
-      </div>
-      <div class="category-icon">🛒</div>
-      <div class="arrow">‹</div>
-    </a>
+<a class="category green" href="./stores.html?category=ماركت">
+  <div class="category-content">
+    <h2>ماركت</h2>
+    <p>بقالة - خضار - غذائية منزلية - أطفال</p>
+  </div>
+  <div class="category-icon">🛒</div>
+  <div class="arrow">‹</div>
+</a>
 
-    <a class="category blue" href="./stores.html">
-      <div class="category-content">
-        <h2>مخابز وحلويات</h2>
-        <p>خبز - كيك - مستلزمات عيد الميلاد - معجنات</p>
-      </div>
-      <div class="category-icon">🥐</div>
-      <div class="arrow">‹</div>
-    </a>
+<a class="category blue" href="./stores.html?category=مخابز وحلويات">
+  <div class="category-content">
+    <h2>مخابز وحلويات</h2>
+    <p>خبز - كيك - مستلزمات عيد الميلاد - معجنات</p>
+  </div>
+  <div class="category-icon">🥐</div>
+  <div class="arrow">‹</div>
+</a>
 
-    <a class="category red" href="./stores.html">
-      <div class="category-content">
-        <h2>طبخ منزلي</h2>
-        <p>كبة - دولمة - لحم بعجين - أكلات بيتية</p>
-      </div>
-      <div class="category-icon">🏪</div>
-      <div class="arrow">‹</div>
-    </a>
+<a class="category red" href="./stores.html?category=طبخ منزلي">
+  <div class="category-content">
+    <h2>طبخ منزلي</h2>
+    <p>كبة - دولمة - لحم بعجين - أكلات بيتية</p>
+  </div>
+  <div class="category-icon">🏪</div>
+  <div class="arrow">‹</div>
+</a>
 
-    <a class="category yellow" href="./stores.html">
-      <div class="category-content">
-        <h2>صيدليات</h2>
-        <p>مستلزمات الصيدلية والاحتياجات الصحية</p>
-      </div>
-      <div class="category-icon">💊</div>
-      <div class="arrow">‹</div>
-    </a>
+<a class="category yellow" href="./stores.html?category=صيدليات">
+  <div class="category-content">
+    <h2>صيدليات</h2>
+    <p>مستلزمات الصيدلية والاحتياجات الصحية</p>
+  </div>
+  <div class="category-icon">💊</div>
+  <div class="arrow">‹</div>
+</a>
 
-  </section>
+</section>
 
-  <button id="installButton" class="install">
-    📲 تثبيت تطبيق طلبات المدينة
-  </button>
+<button id="installButton" class="install">
+  📲 تثبيت تطبيق طلبات المدينة
+</button>
 
 </main>
 
 <footer>
-  جميع الحقوق محفوظة © طلبات المدينة
+جميع الحقوق محفوظة © طلبات المدينة
 </footer>
 
 <nav class="bottom-nav">
   <a class="nav-item" href="#account" onclick="showNotice('قسم حسابي قيد التجهيز')">
-    <span>👤</span>
-    حسابي
+    <span>👤</span>حسابي
   </a>
 
   <a class="nav-item" href="#favorites" onclick="showNotice('قسم المفضلة قيد التجهيز')">
-    <span>♥</span>
-    المفضلة
+    <span>♥</span>المفضلة
   </a>
 
   <a class="nav-item" href="./track.html">
-    <span>🛍️</span>
-    طلباتي
+    <span>🛍️</span>طلباتي
   </a>
 
   <a class="nav-item active" href="./index.html">
-    <span>🏠</span>
-    الرئيسية
+    <span>🏠</span>الرئيسية
   </a>
 </nav>
 
@@ -298,10 +300,16 @@ function getLocation(){
 
   navigator.geolocation.getCurrentPosition(
     function(position){
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+
+      localStorage.setItem("customer_latitude", lat);
+      localStorage.setItem("customer_longitude", lng);
+
       result.textContent = "تم تحديد موقعك بنجاح ✓";
     },
-    function(error){
-      result.textContent = "لم نتمكن من تحديد الموقع. تحقق من السماح للموقع بالوصول.";
+    function(){
+      result.textContent = "تعذر تحديد الموقع. تحقق من صلاحية الوصول للموقع.";
     },
     {
       enableHighAccuracy:true,
@@ -314,7 +322,7 @@ if("serviceWorker" in navigator){
   window.addEventListener("load",function(){
     navigator.serviceWorker.register("./sw.js")
       .catch(function(error){
-        console.log(error);
+        console.log("Service Worker:",error);
       });
   });
 }
