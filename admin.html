@@ -5,6 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>لوحة المدير - طلبات المدينة</title>
+
 <style>
 *{box-sizing:border-box}
 body{margin:0;font-family:Arial;background:#f3f5f8;color:#222}
@@ -46,6 +47,7 @@ a.map-link{background:#33a6d9}
 }
 </style>
 </head>
+
 <body>
 
 <header>
@@ -89,8 +91,10 @@ a.map-link{background:#33a6d9}
 
 <section class="card" id="ordersSection">
 <h3>إدارة الطلبات وإسنادها للموصّلين</h3>
+
 <div class="filters">
 <input id="orderSearch" placeholder="ابحث بالاسم أو الهاتف أو رقم الطلب" oninput="renderOrders()">
+
 <select id="statusFilter" onchange="renderOrders()">
 <option value="">كل الحالات</option>
 <option value="بانتظار مراجعة المدير">بانتظار مراجعة المدير</option>
@@ -100,6 +104,7 @@ a.map-link{background:#33a6d9}
 <option value="تم الإلغاء">تم الإلغاء</option>
 </select>
 </div>
+
 <button onclick="loadOrders()">تحديث الطلبات</button>
 <div id="orders"></div>
 </section>
@@ -111,6 +116,7 @@ a.map-link{background:#33a6d9}
 <input id="storeImage" placeholder="رابط صورة المتجر اختياري">
 <input id="storeFee" type="number" min="0" step="1" placeholder="أجرة التوصيل بالدينار">
 <button onclick="addStore()">إضافة المتجر</button>
+
 <div class="details">
 <h3>المتاجر الموجودة</h3>
 <div id="storesList"></div>
@@ -121,12 +127,15 @@ a.map-link{background:#33a6d9}
 <h3>إدارة المنتجات</h3>
 <h4>إضافة منتج</h4>
 <input id="productName" placeholder="اسم المنتج">
+
 <select id="productStore">
 <option value="">اختر المتجر</option>
 </select>
+
 <input id="productPrice" type="number" min="0" step="1" placeholder="السعر بالدينار">
 <input id="productImage" placeholder="رابط صورة المنتج اختياري">
 <button onclick="addProduct()">إضافة المنتج</button>
+
 <div class="details">
 <h3>المنتجات الموجودة</h3>
 <div id="productsList"></div>
@@ -136,11 +145,15 @@ a.map-link{background:#33a6d9}
 <section class="card hidden" id="driversSection">
 <h3>إدارة الموصّلين</h3>
 <h4>إنشاء حساب موصّل جديد</h4>
+
 <input id="driverName" placeholder="اسم الموصّل">
 <input id="driverPhone" type="tel" placeholder="رقم الهاتف مثال 07XXXXXXXXX">
 <input id="driverPassword" type="password" placeholder="كلمة المرور - 8 أحرف على الأقل">
+
 <button id="createDriverButton" onclick="createDriver()">إنشاء حساب الموصّل</button>
+
 <div id="driverMessage" class="notice hidden"></div>
+
 <div class="details">
 <h3>قائمة الموصّلين</h3>
 <button onclick="loadDrivers()">تحديث قائمة الموصّلين</button>
@@ -151,10 +164,12 @@ a.map-link{background:#33a6d9}
 <div class="card">
 <button class="cancel" onclick="logout()">تسجيل الخروج</button>
 </div>
+
 </section>
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <script>
 const SUPABASE_URL="https://iombzxymujzetguqdhkq.supabase.co";
 const SUPABASE_KEY="sb_publishable_dTg1TjFIepJqVTycKHe42A_DW0ZwNT_";
@@ -250,6 +265,7 @@ async function verifySession(){
  if(!data.session)return;
 
  const user=data.session.user;
+
  const {data:admin}=await db.from("admin_users")
   .select("user_id").eq("user_id",user.id).maybeSingle();
 
@@ -264,12 +280,14 @@ async function verifySession(){
 
 async function refreshAll(){
  say("جاري تحديث البيانات...");
+
  await Promise.all([
   loadOrders(),
   loadStores(),
   loadProducts(),
   loadDrivers()
  ]);
+
  renderOrders();
  updateStats();
  say("تم تحديث بيانات لوحة المدير.");
@@ -301,6 +319,7 @@ async function loadOrders(){
 
 function updateStats(){
  const orders=allOrders;
+
  $("statAll").textContent=orders.length;
  $("statNew").textContent=orders.filter(o=>o.status==="بانتظار مراجعة المدير").length;
  $("statDelivery").textContent=orders.filter(o=>o.status==="قيد التوصيل").length;
@@ -309,6 +328,7 @@ function updateStats(){
 
  const revenue=orders.filter(o=>o.status==="تم التسليم")
   .reduce((sum,o)=>sum+Number(o.total||0),0);
+
  $("statRevenue").textContent=money(revenue);
 }
 
@@ -322,6 +342,7 @@ function renderOrders(){
  const filtered=allOrders.filter(order=>{
   const text=[order.id,order.customer_name,order.customer_phone,order.customer_address]
    .join(" ").toLowerCase();
+
   return (!query||text.includes(query))&&(!filter||order.status===filter);
  });
 
@@ -348,6 +369,7 @@ function renderOrders(){
   if(order.customer_latitude!=null&&order.customer_longitude!=null&&
      Number.isFinite(lat)&&Number.isFinite(lng)&&
      lat>=-90&&lat<=90&&lng>=-180&&lng<=180){
+
    const mapLink=document.createElement("a");
    mapLink.className="contact map-link";
    mapLink.href="https://waze.com/ul?ll="+encodeURIComponent(lat+","+lng)+"&navigate=yes";
@@ -355,6 +377,7 @@ function renderOrders(){
    mapLink.rel="noopener";
    mapLink.textContent="🚗 عرض موقع الزبون على Waze";
    card.appendChild(mapLink);
+
   }else{
    addText(card,"موقع الزبون: ","غير محدد في هذا الطلب");
   }
@@ -364,12 +387,11 @@ function renderOrders(){
   addText(card,"الحالة: ",order.status);
   addText(card,"تاريخ الطلب: ",dateText(order.created_at));
 
-  /* عرض الموصّل الحالي واختيار موصّل */
-
   const assignBox=document.createElement("div");
   assignBox.className="assign-box";
 
   const assigned=allDrivers.find(d=>d.id===order.driver_id);
+
   addText(assignBox,"الموصّل الحالي: ",
     assigned?assigned.full_name+" - "+assigned.phone:
     (order.driver_id?"معرّف موصّل غير موجود":"لم يتم تعيين موصّل"));
@@ -386,7 +408,9 @@ function renderOrders(){
    const option=document.createElement("option");
    option.value=driver.id;
    option.textContent=driver.full_name+" - "+driver.phone;
+
    if(driver.id===order.driver_id)option.selected=true;
+
    driverSelect.appendChild(option);
   });
 
@@ -395,21 +419,24 @@ function renderOrders(){
   const assignButton=document.createElement("button");
   assignButton.className="secondary";
   assignButton.textContent="🚚 تعيين الطلب";
+
   assignButton.onclick=()=>{
    if(!driverSelect.value){
     say("اختر موصّلاً أولاً.",true);
     return;
    }
+
    assignOrder(order.id,driverSelect.value);
   };
+
   assignBox.appendChild(assignButton);
 
   const unassignButton=document.createElement("button");
   unassignButton.className="cancel";
   unassignButton.textContent="إلغاء تعيين الموصّل";
   unassignButton.onclick=()=>assignOrder(order.id,null);
-  assignBox.appendChild(unassignButton);
 
+  assignBox.appendChild(unassignButton);
   card.appendChild(assignBox);
 
   const phone=normalizePhone(order.customer_phone);
@@ -431,11 +458,14 @@ function renderOrders(){
    wa.textContent="واتساب";
    contact.appendChild(wa);
   }
+
   card.appendChild(contact);
 
   showProducts(card,order.products);
 
-  if(order.customer_notes)addText(card,"ملاحظات الزبون: ",order.customer_notes);
+  if(order.customer_notes){
+   addText(card,"ملاحظات الزبون: ",order.customer_notes);
+  }
 
   const actions=[
    {label:"قبول الطلب",value:"تم قبول الطلب",cls:"secondary"},
@@ -487,6 +517,7 @@ function showProducts(parent,products){
  section.appendChild(heading);
 
  let items=products;
+
  if(typeof items==="string"){
   try{items=JSON.parse(items)}catch(e){items=[]}
  }
@@ -497,6 +528,7 @@ function showProducts(parent,products){
   items.forEach(item=>{
    const p=document.createElement("div");
    p.className="product";
+
    if(typeof item==="string"){
     p.textContent=item;
    }else{
@@ -504,19 +536,25 @@ function showProducts(parent,products){
     addText(p,"الكمية: ",item.quantity||1);
     addText(p,"السعر: ",money(item.price));
    }
+
    section.appendChild(p);
   });
  }
+
  parent.appendChild(section);
 }
 
 async function changeStatus(id,newStatus){
  say("جاري تحديث حالة الطلب...");
- const {error}=await db.from("orders").update({status:newStatus}).eq("id",id);
+
+ const {error}=await db.from("orders")
+  .update({status:newStatus}).eq("id",id);
+
  if(error){
   say("تعذر تحديث الحالة: "+error.message,true);
   return;
  }
+
  say("تم تحديث الطلب رقم #"+id);
  await loadOrders();
 }
@@ -548,6 +586,7 @@ async function addStore(){
   say("اكتب اسم المتجر والتصنيف.",true);
   return;
  }
+
  if(!Number.isSafeInteger(delivery_fee)||delivery_fee<0){
   say("أجرة التوصيل غير صحيحة.",true);
   return;
@@ -566,6 +605,7 @@ async function addStore(){
  $("storeCategory").value="";
  $("storeImage").value="";
  $("storeFee").value="";
+
  say("تمت إضافة المتجر.");
  await loadStores();
 }
@@ -614,8 +654,10 @@ function renderStores(){
   const save=document.createElement("button");
   save.className="edit";
   save.textContent="حفظ التعديلات";
+
   save.onclick=async()=>{
    const delivery_fee=Number(fee.value);
+
    if(!name.value.trim()||!category.value.trim()||
       !Number.isSafeInteger(delivery_fee)||delivery_fee<0){
     say("تأكد من بيانات المتجر وأجرة التوصيل.",true);
@@ -633,24 +675,30 @@ function renderStores(){
     say("تعذر تعديل المتجر: "+error.message,true);
     return;
    }
+
    say("تم حفظ بيانات المتجر.");
    await loadStores();
   };
+
   card.appendChild(save);
 
   const toggle=document.createElement("button");
   toggle.className=store.is_active?"cancel":"done";
   toggle.textContent=store.is_active?"إغلاق المتجر":"فتح المتجر";
+
   toggle.onclick=async()=>{
    const {error}=await db.from("stores")
     .update({is_active:!store.is_active}).eq("id",store.id);
+
    if(error){
     say("تعذر تغيير حالة المتجر: "+error.message,true);
     return;
    }
+
    say("تم تغيير حالة المتجر.");
    await loadStores();
   };
+
   card.appendChild(toggle);
   box.appendChild(card);
  });
@@ -716,6 +764,7 @@ async function addProduct(){
  $("productStore").value="";
  $("productPrice").value="";
  $("productImage").value="";
+
  say("تمت إضافة المنتج.");
  await loadProducts();
 }
@@ -734,6 +783,7 @@ function renderProducts(){
   card.className="product";
 
   const store=allStores.find(s=>String(s.id)===String(product.store_id));
+
   addText(card,"المنتج: ",product.name);
   addText(card,"المتجر: ",store?store.name:product.store_id);
   addText(card,"السعر: ",money(product.price));
@@ -742,15 +792,19 @@ function renderProducts(){
   const edit=document.createElement("button");
   edit.className="edit";
   edit.textContent="تعديل الاسم والسعر والصورة";
+
   edit.onclick=async()=>{
    const name=prompt("اسم المنتج:",product.name);
    if(name===null)return;
+
    const priceText=prompt("السعر بالدينار:",product.price);
    if(priceText===null)return;
+
    const image=prompt("رابط الصورة:",product.image||"");
    if(image===null)return;
 
    const price=Number(priceText);
+
    if(name.trim().length<2||!Number.isFinite(price)||price<0){
     say("الاسم أو السعر غير صحيح.",true);
     return;
@@ -764,24 +818,30 @@ function renderProducts(){
     say("تعذر تعديل المنتج: "+error.message,true);
     return;
    }
+
    say("تم تعديل المنتج.");
    await loadProducts();
   };
+
   card.appendChild(edit);
 
   const toggle=document.createElement("button");
   toggle.className=product.is_active?"cancel":"done";
   toggle.textContent=product.is_active?"إيقاف المنتج":"تفعيل المنتج";
+
   toggle.onclick=async()=>{
    const {error}=await db.from("products")
     .update({is_active:!product.is_active}).eq("id",product.id);
+
    if(error){
     say("تعذر تغيير حالة المنتج: "+error.message,true);
     return;
    }
+
    say("تم تغيير حالة المنتج.");
    await loadProducts();
   };
+
   card.appendChild(toggle);
   box.appendChild(card);
  });
@@ -812,7 +872,10 @@ async function createDriver(){
   });
 
   if(error)throw error;
-  if(!data||!data.success)throw new Error(data?.error||"تعذر إنشاء الحساب.");
+
+  if(!data||!data.success){
+   throw new Error(data?.error||"تعذر إنشاء الحساب.");
+  }
 
   message.textContent="تم إنشاء حساب الموصّل بنجاح: "+data.driver.phone;
   message.classList.add("success");
@@ -857,21 +920,73 @@ async function loadDrivers(){
   allDrivers.forEach(driver=>{
    const card=document.createElement("div");
    card.className="driver";
+
    addText(card,"اسم الموصّل: ",driver.full_name);
    addText(card,"رقم الهاتف: ",driver.phone);
    addText(card,"تاريخ إنشاء الحساب: ",dateText(driver.created_at));
+
+   const del=document.createElement("button");
+   del.className="cancel";
+   del.textContent="🗑️ حذف الموصّل";
+   del.onclick=()=>deleteDriver(driver.id,driver.full_name);
+
+   card.appendChild(del);
    box.appendChild(card);
   });
  }
 
- // إعادة بناء قوائم تعيين الموصّلين داخل الطلبات
  renderOrders();
+}
+
+/* حذف حساب موصّل */
+
+async function deleteDriver(driverId,driverName){
+ const confirmed=confirm(
+  "هل تريد حذف حساب الموصّل "+driverName+"؟\n"+
+  "إذا لديه طلبات مسندة فلن يسمح النظام بحذفه."
+ );
+
+ if(!confirmed)return;
+
+ say("جاري التحقق من طلبات الموصّل...");
+
+ try{
+  const {data,error}=await db.functions.invoke("delete-driver",{
+   body:{driver_id:driverId}
+  });
+
+  if(error){
+   let message=error.message;
+
+   try{
+    if(error.context){
+     const details=await error.context.json();
+     if(details.error)message=details.error;
+    }
+   }catch(e){}
+
+   throw new Error(message);
+  }
+
+  if(!data||data.success!==true){
+   throw new Error(data?.error||"تعذر حذف الموصّل.");
+  }
+
+  say(data.message||"تم حذف حساب الموصّل بنجاح.");
+
+  await loadDrivers();
+  await loadOrders();
+
+ }catch(error){
+  say("لم يتم الحذف: "+error.message,true);
+ }
 }
 
 /* تسجيل الخروج */
 
 async function logout(){
  await db.auth.signOut();
+
  $("dashboard").hidden=true;
  $("loginBox").hidden=false;
  $("password").value="";
@@ -880,6 +995,7 @@ async function logout(){
 }
 
 verifySession();
+
 </script>
 </body>
 </html>
