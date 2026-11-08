@@ -57,6 +57,13 @@ body{
 .blue{background:#129ed2}
 .red{background:#df174a}
 .yellow{background:#e7a21a}
+
+.admin-panel{
+  display:none;width:100%;margin-top:22px;
+  padding:17px;background:#102a43;color:white;
+  border:0;border-radius:15px;font-size:18px;
+  font-weight:bold;cursor:pointer;
+}
 .install{
   display:none;width:100%;padding:14px;margin-top:20px;
   background:#16834a;color:white;border:0;
@@ -157,6 +164,11 @@ footer{text-align:center;color:#888;padding:20px;font-size:12px}
 
 </section>
 
+<button id="adminPanelButton" class="admin-panel"
+  onclick="location.href='./admin.html'">
+  🛡️ لوحة تحكم المدير
+</button>
+
 <button id="installButton" class="install">
   📲 تثبيت تطبيق طلبات المدينة
 </button>
@@ -182,7 +194,57 @@ footer{text-align:center;color:#888;padding:20px;font-size:12px}
   </a>
 </nav>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <script>
+const SUPABASE_URL = "https://iombzxymujzetguqdhkq.supabase.co";
+const SUPABASE_KEY = "sb_publishable_dTg1TjFIepJqVTycKHe42A_DW0ZwNT_";
+
+const db = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
+);
+
+const adminButton = document.getElementById("adminPanelButton");
+
+async function checkAdminAccess(){
+  adminButton.style.display = "none";
+
+  try {
+    const { data: userData, error: userError } =
+      await db.auth.getUser();
+
+    if(userError || !userData.user){
+      return;
+    }
+
+    const { data, error } = await db
+      .from("admin_users")
+      .select("user_id")
+      .eq("user_id", userData.user.id)
+      .maybeSingle();
+
+    if(error){
+      console.log("Admin check:", error.message);
+      return;
+    }
+
+    if(data){
+      adminButton.style.display = "block";
+    }
+
+  } catch(error) {
+    console.log("Admin error:", error);
+    adminButton.style.display = "none";
+  }
+}
+
+checkAdminAccess();
+
+db.auth.onAuthStateChange(function(){
+  setTimeout(checkAdminAccess, 0);
+});
+
 function getLocation(){
   const result=document.getElementById("locationResult");
 
