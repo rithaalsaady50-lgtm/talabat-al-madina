@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -139,6 +140,10 @@ let currentStoreName = requestedStoreName;
 let customerLatitude = null;
 let customerLongitude = null;
 
+/* بيانات المستخدم والمفضلة من Supabase */
+let currentUser = null;
+let favoriteProducts = new Map();
+
 const productsArea = document.getElementById("products");
 const cartArea = document.getElementById("cartItems");
 const resultArea = document.getElementById("result");
@@ -146,61 +151,6 @@ const submitButton = document.getElementById("submitButton");
 const locationButton = document.getElementById("locationButton");
 const wazeButton = document.getElementById("wazeButton");
 const locationStatus = document.getElementById("locationStatus");
-
-/* نظام المفضلة */
-const FAVORITES_KEY = "talabat_madina_favorites";
-
-function getFavorites(){
- try{
-  const saved = JSON.parse(localStorage.getItem(FAVORITES_KEY));
-  return Array.isArray(saved) ? saved : [];
- }catch(error){
-  return [];
- }
-}
-
-function isFavorite(productId){
- return getFavorites().some(item =>
-  item.type === "product" &&
-  String(item.id) === String(productId)
- );
-}
-
-function toggleFavorite(product){
-
- let favorites = getFavorites();
-
- const exists = favorites.some(item =>
-  item.type === "product" &&
-  String(item.id) === String(product.id)
- );
-
- if(exists){
-
-  favorites = favorites.filter(item =>
-   !(item.type === "product" &&
-     String(item.id) === String(product.id))
-  );
-
- }else{
-
-  favorites.push({
-   id:String(product.id),
-   type:"product",
-   name:product.name,
-   description:currentStoreName,
-   addedAt:new Date().toISOString()
-  });
-
- }
-
- localStorage.setItem(
-  FAVORITES_KEY,
-  JSON.stringify(favorites)
- );
-
- showProducts();
-}
 
 function money(value){
  return Number(value || 0).toLocaleString("en-US") + " دينار";
@@ -214,6 +164,100 @@ function productsTotal(){
 
 function finalTotal(){
  return productsTotal() + (cart.length > 0 ? deliveryFee : 0);
+}
+
+/* قراءة مفضلة المستخدم من قاعدة البيانات */
+async function loadFavoriteProducts(){
+
+ favoriteProducts.clear();
+
+ const {data:userData,error:userError} = await db.auth.getUser();
+
+ if(userError) throw userError;
+
+ currentUser = userData.user;
+
+ if(!currentUser){
+  return;
+ }
+
+ const {data,error} = await db
+  .from("favorites")
+  .select("id,item_id,item_name,item_description")
+  .eq("user_id",currentUser.id)
+  .eq("item_type","product");
+
+ if(error) throw error;
+
+ (data || []).forEach(item=>{
+  favoriteProducts.set(String(item.item_id),item);
+ });
+}
+
+function isFavorite(productId){
+ return favoriteProducts.has(String(productId));
+}
+
+/* إضافة أو حذف المنتج من مفضلة Supabase */
+async function toggleFavorite(product,button){
+
+ if(!currentUser){
+  alert("يرجى تسجيل الدخول أولاً حتى تحفظ المنتجات بالمفضلة.");
+  location.href = "account.html";
+  return;
+ }
+
+ const productId = String(product.id);
+ const savedFavorite = favoriteProducts.get(productId);
+
+ button.disabled = true;
+
+ try{
+
+  if(savedFavorite){
+
+   const {error} = await db
+    .from("favorites")
+    .delete()
+    .eq("id",savedFavorite.id)
+    .eq("user_id",currentUser.id);
+
+   if(error) throw error;
+
+   favoriteProducts.delete(productId);
+
+  }else{
+
+   const {data,error} = await db
+    .from("favorites")
+    .insert({
+     user_id:currentUser.id,
+     item_type:"product",
+     item_id:productId,
+     item_name:product.name,
+     item_description:currentStoreName
+    })
+    .select("id,item_id,item_name,item_description")
+    .single();
+
+   if(error) throw error;
+
+   favoriteProducts.set(productId,data);
+  }
+
+  showProducts();
+
+ }catch(error){
+
+  console.error("Favorite error:",error);
+
+  alert(
+   "تعذر تحديث المفضلة.\n" +
+   (error.message || "حدث خطأ غير معروف.")
+  );
+
+  button.disabled = false;
+ }
 }
 
 /* تحديد موقع الزبون */
@@ -302,6 +346,14 @@ async function loadProducts(){
  }
 
  try{
+
+  /* تحميل المستخدم ومفضلته */
+  try{
+   await loadFavoriteProducts();
+  }catch(favoriteError){
+   console.error("Favorites loading error:",favoriteError);
+   favoriteProducts.clear();
+  }
 
   const {data:store,error:storeError} = await db
    .from("stores")
@@ -395,7 +447,7 @@ function showProducts(){
    : "♥ إضافة للمفضلة";
 
   favoriteButton.onclick = ()=>{
-   toggleFavorite(product);
+   toggleFavorite(product,favoriteButton);
   };
 
   const button = document.createElement("button");
