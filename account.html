@@ -4,19 +4,61 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>حسابي - طلبات المدينة</title>
+
 <style>
 *{box-sizing:border-box}
-body{margin:0;font-family:Arial;background:#f3f5f8;color:#222}
-header{background:#5145df;color:white;text-align:center;padding:20px}
-main{max-width:480px;margin:20px auto;padding:15px}
-.card{background:white;padding:18px;border-radius:14px;margin-bottom:15px}
-input{width:100%;padding:13px;margin:8px 0;border:1px solid #ddd;border-radius:9px;font-size:16px}
-button{width:100%;padding:13px;border:0;border-radius:9px;background:#5145df;color:white;font-size:16px;margin-top:8px}
+body{
+  margin:0;
+  font-family:Arial;
+  background:#f3f5f8;
+  color:#222;
+}
+header{
+  background:#5145df;
+  color:white;
+  text-align:center;
+  padding:20px;
+}
+main{
+  max-width:480px;
+  margin:20px auto;
+  padding:15px;
+}
+.card{
+  background:white;
+  padding:18px;
+  border-radius:14px;
+  margin-bottom:15px;
+}
+input{
+  width:100%;
+  padding:13px;
+  margin:8px 0;
+  border:1px solid #ddd;
+  border-radius:9px;
+  font-size:16px;
+}
+button{
+  width:100%;
+  padding:13px;
+  border:0;
+  border-radius:9px;
+  background:#5145df;
+  color:white;
+  font-size:16px;
+  margin-top:8px;
+}
 .secondary{background:#102a43}
 .hidden{display:none}
-.message{text-align:center;margin:12px 0;color:#16834a}
+.message{
+  text-align:center;
+  margin:12px 0;
+  line-height:1.7;
+}
+a{color:#5145df;text-decoration:none}
 </style>
 </head>
+
 <body>
 
 <header>
@@ -25,53 +67,97 @@ button{width:100%;padding:13px;border:0;border-radius:9px;background:#5145df;col
 </header>
 
 <main>
+
 <div class="card" id="loginBox">
+
 <h3>تسجيل الدخول</h3>
-<input id="email" type="email" placeholder="البريد الإلكتروني">
-<input id="password" type="password" placeholder="كلمة المرور">
+
+<input id="email" type="email"
+placeholder="البريد الإلكتروني">
+
+<input id="password" type="password"
+placeholder="كلمة المرور">
+
 <button onclick="login()">دخول</button>
 
 <hr>
 
 <h3>إنشاء حساب جديد</h3>
-<input id="name" type="text" placeholder="الاسم الكامل">
-<input id="newEmail" type="email" placeholder="البريد الإلكتروني">
-<input id="newPassword" type="password" placeholder="كلمة المرور">
-<input id="address" type="text" placeholder="العنوان">
+
+<input id="name" type="text"
+placeholder="الاسم الكامل">
+
+<input id="newEmail" type="email"
+placeholder="البريد الإلكتروني">
+
+<input id="newPassword" type="password"
+placeholder="كلمة المرور">
+
 <button onclick="signup()">إنشاء حساب</button>
+
 <p id="message" class="message"></p>
+
 </div>
 
 <div class="card hidden" id="profileBox">
-<h3>مرحباً بك</h3>
+
+<h3>مرحباً بك في طلبات المدينة</h3>
+
 <p id="profileName"></p>
 <p id="profileEmail"></p>
-<p id="profileAddress"></p>
-<button class="secondary" onclick="logout()">تسجيل الخروج</button>
+
+<hr>
+
+<h3>تعديل الاسم</h3>
+
+<input id="editName" type="text"
+placeholder="اكتب اسمك الجديد">
+
+<button onclick="updateName()">حفظ الاسم</button>
+
+<button class="secondary"
+onclick="logout()">تسجيل الخروج</button>
+
+<p id="profileMessage" class="message"></p>
+
 </div>
 
 <a href="./index.html">العودة إلى الرئيسية</a>
+
 </main>
 
 <script type="module">
-import { createClient } from
+
+import {createClient} from
 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
-const SUPABASE_URL = 'https://iombzxymujzetguqdhkq.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_dTg1TjFIepJqVTycKHe42A_DW0ZwNT_';
+const SUPABASE_URL =
+'https://iombzxymujzetguqdhkq.supabase.co';
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+const SUPABASE_KEY =
+'sb_publishable_dTg1TjFIepJqVTycKHe42A_DW0ZwNT_';
+
+const supabase = createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
+);
 
 const message = document.getElementById('message');
+const profileMessage = document.getElementById('profileMessage');
 
 async function signup(){
+
   const name = document.getElementById('name').value.trim();
   const email = document.getElementById('newEmail').value.trim();
   const password = document.getElementById('newPassword').value;
-  const address = document.getElementById('address').value.trim();
 
   if(!name || !email || !password){
-    message.textContent = 'املأ الاسم والبريد وكلمة المرور';
+    message.textContent = 'يرجى ملء جميع الحقول';
+    return;
+  }
+
+  if(password.length < 6){
+    message.textContent = 'كلمة المرور يجب أن تكون 6 أحرف على الأقل';
     return;
   }
 
@@ -80,8 +166,7 @@ async function signup(){
     password,
     options:{
       data:{
-        full_name:name,
-        address:address
+        full_name:name
       }
     }
   });
@@ -91,15 +176,24 @@ async function signup(){
     return;
   }
 
-  message.textContent = data.session
-    ? 'تم إنشاء الحساب بنجاح'
-    : 'تم إنشاء الحساب. افحص بريدك الإلكتروني لتأكيده.';
-  await checkUser();
+  if(data.session){
+    message.textContent = 'تم إنشاء الحساب بنجاح';
+    await checkUser();
+  }else{
+    message.textContent =
+    'تم إنشاء الحساب. افحص بريدك الإلكتروني لتأكيده.';
+  }
 }
 
 async function login(){
+
   const email = document.getElementById('email').value.trim();
   const password = document.getElementById('password').value;
+
+  if(!email || !password){
+    message.textContent = 'اكتب البريد وكلمة المرور';
+    return;
+  }
 
   const {error} = await supabase.auth.signInWithPassword({
     email,
@@ -111,42 +205,89 @@ async function login(){
     return;
   }
 
-  message.textContent = 'تم تسجيل الدخول';
+  message.textContent = 'تم تسجيل الدخول بنجاح';
+  await checkUser();
+}
+
+async function updateName(){
+
+  const newName = document.getElementById('editName').value.trim();
+
+  if(!newName){
+    profileMessage.textContent = 'اكتب الاسم الجديد';
+    return;
+  }
+
+  const {error} = await supabase.auth.updateUser({
+    data:{
+      full_name:newName
+    }
+  });
+
+  if(error){
+    profileMessage.textContent = error.message;
+    return;
+  }
+
+  profileMessage.textContent = 'تم حفظ الاسم بنجاح';
   await checkUser();
 }
 
 async function logout(){
-  await supabase.auth.signOut();
+
+  const {error} = await supabase.auth.signOut();
+
+  if(error){
+    profileMessage.textContent = error.message;
+    return;
+  }
+
   await checkUser();
 }
 
 async function checkUser(){
-  const {data:{user}} = await supabase.auth.getUser();
 
-  document.getElementById('loginBox').classList.toggle('hidden',!!user);
-  document.getElementById('profileBox').classList.toggle('hidden',!user);
+  const {data,error} = await supabase.auth.getUser();
+
+  if(error){
+    console.log(error.message);
+  }
+
+  const user = data?.user;
+
+  document.getElementById('loginBox')
+    .classList.toggle('hidden',!!user);
+
+  document.getElementById('profileBox')
+    .classList.toggle('hidden',!user);
 
   if(user){
+
+    const name = user.user_metadata?.full_name || 'لم يُسجّل الاسم';
+
     document.getElementById('profileName').textContent =
-      'الاسم: ' + (user.user_metadata?.full_name || 'غير محدد');
+      'الاسم: ' + name;
 
     document.getElementById('profileEmail').textContent =
-      'البريد: ' + user.email;
+      'البريد الإلكتروني: ' + user.email;
 
-    document.getElementById('profileAddress').textContent =
-      'العنوان: ' + (user.user_metadata?.address || 'غير محدد');
+    document.getElementById('editName').value =
+      user.user_metadata?.full_name || '';
   }
 }
 
 window.signup = signup;
 window.login = login;
 window.logout = logout;
+window.updateName = updateName;
 
 await checkUser();
 
 supabase.auth.onAuthStateChange(() => {
   checkUser();
 });
+
 </script>
+
 </body>
 </html>
