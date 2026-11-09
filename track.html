@@ -6,7 +6,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>متابعة الطلب - طلبات المدينة</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
 <style>
 *{box-sizing:border-box}
 body{margin:0;font-family:Arial;background:#f3f5f8;color:#222}
@@ -17,7 +16,7 @@ input,textarea,button{width:100%;padding:14px;border-radius:8px;font-size:16px;m
 input,textarea{border:1px solid #ccc}
 textarea{resize:vertical;min-height:90px}
 button{border:0;background:#16834a;color:white;cursor:pointer}
-button:disabled{opacity:.6;cursor:not-allowed}
+button:disabled{opacity:.6}
 .status{padding:15px;background:#e8f5ed;color:#16834a;border-radius:10px;text-align:center;font-weight:bold;font-size:19px;margin:15px 0}
 .info{line-height:2;border-bottom:1px solid #eee;padding:10px 0}
 .error{color:#b42318;background:#fff0f0;padding:12px;border-radius:8px;margin-top:12px}
@@ -31,7 +30,6 @@ button:disabled{opacity:.6;cursor:not-allowed}
 .rating-label{text-align:center;font-weight:bold;margin-top:15px}
 </style>
 </head>
-
 <body>
 
 <header>
@@ -51,21 +49,14 @@ button:disabled{opacity:.6;cursor:not-allowed}
 
 <div id="result"></div>
 </div>
-
 <p class="small">طلبات المدينة © جميع الحقوق محفوظة</p>
 </div>
 
 <script>
-const SUPABASE_URL =
-"https://iombzxymujzetguqdhkq.supabase.co";
+const SUPABASE_URL = "https://iombzxymujzetguqdhkq.supabase.co";
+const SUPABASE_KEY = "sb_publishable_dTg1TjFIepJqVTycKHe42A_DW0ZwNT_";
 
-const SUPABASE_KEY =
-"sb_publishable_dTg1TjFIepJqVTycKHe42A_DW0ZwNT_";
-
-const db = supabase.createClient(
-SUPABASE_URL,
-SUPABASE_KEY.trim()
-);
+const db = supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 
 const orderIdInput = document.getElementById("orderId");
 const phoneInput = document.getElementById("customerPhone");
@@ -95,7 +86,8 @@ strong.textContent = label + ": ";
 const span = document.createElement("span");
 span.textContent = value ?? "غير متوفر";
 
-row.append(strong,span);
+row.appendChild(strong);
+row.appendChild(span);
 parent.appendChild(row);
 }
 
@@ -106,7 +98,14 @@ box.textContent = message;
 parent.appendChild(box);
 }
 
-function createRatingStars(containerId,type){
+function updateStars(containerId,value){
+const buttons = document.getElementById(containerId).querySelectorAll(".star");
+buttons.forEach((button,index)=>{
+button.classList.toggle("active",index < value);
+});
+}
+
+function createStars(containerId,type){
 const container = document.getElementById(containerId);
 
 for(let i=1;i<=5;i++){
@@ -116,32 +115,20 @@ button.className = "star";
 button.textContent = "★";
 button.setAttribute("aria-label","تقييم "+i+" من 5");
 
-button.addEventListener("click",function(){
+button.addEventListener("click",()=>{
 if(type === "store"){
 storeRating = i;
 }else{
 driverRating = i;
 }
-
-updateStars(containerId,type,i);
+updateStars(containerId,i);
 });
 
 container.appendChild(button);
 }
 }
 
-function updateStars(containerId,type,value){
-const buttons = document
-.getElementById(containerId)
-.querySelectorAll(".star");
-
-buttons.forEach((button,index)=>{
-button.classList.toggle("active",index < value);
-});
-}
-
 function showRatingForm(parent){
-
 const box = document.createElement("div");
 box.className = "rating-box";
 
@@ -174,36 +161,27 @@ submit.id = "submitRating";
 submit.textContent = "إرسال التقييم";
 submit.addEventListener("click",submitRating);
 
-box.append(
-heading,
-storeLabel,
-storeStars,
-driverLabel,
-driverStars,
-comment,
-submit
-);
+box.appendChild(heading);
+box.appendChild(storeLabel);
+box.appendChild(storeStars);
+box.appendChild(driverLabel);
+box.appendChild(driverStars);
+box.appendChild(comment);
+box.appendChild(submit);
 
 parent.appendChild(box);
 
-createRatingStars("storeStars","store");
-createRatingStars("driverStars","driver");
+createStars("storeStars","store");
+createStars("driverStars","driver");
 }
 
 async function submitRating(){
-
 const submitButton = document.getElementById("submitRating");
+const box = document.querySelector(".rating-box");
 const comment = document.getElementById("ratingComment").value.trim();
 
-const oldMessage = document.getElementById("ratingMessage");
-if(oldMessage) oldMessage.remove();
-
 if(!storeRating || !driverRating){
-showMessage(
-document.querySelector(".rating-box"),
-"يرجى اختيار تقييم المتجر والسائق.",
-"error"
-);
+showMessage(box,"يرجى اختيار تقييم المتجر والسائق.","error");
 return;
 }
 
@@ -211,28 +189,20 @@ submitButton.disabled = true;
 submitButton.textContent = "جارٍ إرسال التقييم...";
 
 try{
-
-const {data,error} = await db.rpc(
-"submit_order_rating",
-{
+const {data,error} = await db.rpc("submit_order_rating",{
 p_order_id: currentOrder.id,
 p_customer_phone: phoneInput.value.trim(),
 p_store_rating: storeRating,
 p_driver_rating: driverRating,
 p_comment: comment || null
-}
-);
+});
 
 if(error) throw error;
-
 if(!data || !data.success){
 throw new Error(data?.message || "تعذر حفظ التقييم");
 }
 
-const box = document.querySelector(".rating-box");
-
 showMessage(box,data.message,"success");
-
 document.getElementById("ratingComment").disabled = true;
 
 document.querySelectorAll(".star").forEach(button=>{
@@ -240,43 +210,32 @@ button.disabled = true;
 });
 
 submitButton.textContent = "تم إرسال التقييم";
-submitButton.disabled = true;
 
 }catch(error){
 console.error(error);
-
-const box = document.querySelector(".rating-box");
-
-showMessage(
-box,
-error.message || "حدث خطأ أثناء إرسال التقييم.",
-"error"
-);
-
+showMessage(box,error.message || "حدث خطأ أثناء إرسال التقييم.","error");
 submitButton.disabled = false;
 submitButton.textContent = "إعادة إرسال التقييم";
 }
 }
 
 async function trackOrder(){
-
 const orderId = orderIdInput.value.trim();
 const phone = phoneInput.value.trim();
 
 result.replaceChildren();
 result.className = "";
-
 currentOrder = null;
 storeRating = 0;
 driverRating = 0;
 
-if(!orderId || !/^[0-9]+$/.test(orderId) || Number(orderId) <= 0){
+if(!orderId || !/^[0-9]+$/.test(orderId) || Number(orderId)<=0){
 result.textContent = "يرجى إدخال رقم طلب صحيح.";
 result.className = "error";
 return;
 }
 
-if(!phone || phone.replace(/\D/g,"").length < 7){
+if(!phone || phone.replace(/\D/g,"").length<7){
 result.textContent = "يرجى إدخال رقم الهاتف المسجل بالطلب.";
 result.className = "error";
 return;
@@ -286,25 +245,21 @@ searchButton.disabled = true;
 searchButton.textContent = "جارٍ البحث...";
 
 try{
-
-const {data,error} = await db.rpc(
-"track_order_by_number",
-{
+const {data,error} = await db.rpc("track_order_by_number",{
 p_order_id: Number(orderId),
 p_customer_phone: phone
-}
-);
+});
 
 if(error) throw error;
 
-if(!data || data.length === 0){
-result.textContent =
-"لم يتم العثور على الطلب. تأكد من رقم الطلب ورقم الهاتف.";
+if(!data || data.length===0){
+result.textContent = "لم يتم العثور على الطلب. تأكد من رقم الطلب ورقم الهاتف.";
 result.className = "error";
 return;
 }
 
 const order = data[0];
+currentOrder = {id:Number(orderId)};
 
 const card = document.createElement("div");
 card.className = "card";
@@ -316,7 +271,8 @@ const status = document.createElement("div");
 status.className = "status";
 status.textContent = order.order_status;
 
-card.append(heading,status);
+card.appendChild(heading);
+card.appendChild(status);
 
 addInfo(card,"رقم الطلب",order.order_id);
 addInfo(card,"حالة الطلب",order.order_status);
@@ -326,7 +282,6 @@ addInfo(card,"تاريخ الطلب",formatDate(order.order_date));
 const note = document.createElement("p");
 note.className = "small";
 note.textContent = "تتحدث حالة الطلب عند تغييرها من المدير أو الموصّل.";
-
 card.appendChild(note);
 
 if(order.order_status === "تم توصيل الطلب"){
@@ -335,13 +290,9 @@ showRatingForm(card);
 
 result.appendChild(card);
 
-currentOrder = {
-id: Number(orderId)
-};
-
 }catch(error){
 console.error(error);
-result.textContent = "تعذر متابعة الطلب: " + error.message;
+result.textContent = "تعذر متابعة الطلب: " + (error.message || "خطأ غير معروف");
 result.className = "error";
 }finally{
 searchButton.disabled = false;
@@ -349,6 +300,5 @@ searchButton.textContent = "متابعة الطلب";
 }
 }
 </script>
-
 </body>
 </html>
