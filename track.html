@@ -6,6 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>متابعة الطلب - طلبات المدينة</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <style>
 *{box-sizing:border-box}
 body{margin:0;font-family:Arial;background:#f3f5f8;color:#222}
@@ -30,8 +31,8 @@ button:disabled{opacity:.6}
 .rating-label{text-align:center;font-weight:bold;margin-top:15px}
 </style>
 </head>
-<body>
 
+<body>
 <header>
 <h2>🚚 طلبات المدينة</h2>
 <p>متابعة حالة طلبك</p>
@@ -49,6 +50,7 @@ button:disabled{opacity:.6}
 
 <div id="result"></div>
 </div>
+
 <p class="small">طلبات المدينة © جميع الحقوق محفوظة</p>
 </div>
 
@@ -99,7 +101,11 @@ parent.appendChild(box);
 }
 
 function updateStars(containerId,value){
-const buttons = document.getElementById(containerId).querySelectorAll(".star");
+const container = document.getElementById(containerId);
+if(!container) return;
+
+const buttons = container.querySelectorAll(".star");
+
 buttons.forEach((button,index)=>{
 button.classList.toggle("active",index < value);
 });
@@ -107,6 +113,7 @@ button.classList.toggle("active",index < value);
 
 function createStars(containerId,type){
 const container = document.getElementById(containerId);
+if(!container) return;
 
 for(let i=1;i<=5;i++){
 const button = document.createElement("button");
@@ -121,6 +128,7 @@ storeRating = i;
 }else{
 driverRating = i;
 }
+
 updateStars(containerId,i);
 });
 
@@ -178,6 +186,9 @@ createStars("driverStars","driver");
 async function submitRating(){
 const submitButton = document.getElementById("submitRating");
 const box = document.querySelector(".rating-box");
+
+if(!submitButton || !box || !currentOrder) return;
+
 const comment = document.getElementById("ratingComment").value.trim();
 
 if(!storeRating || !driverRating){
@@ -198,11 +209,13 @@ p_comment: comment || null
 });
 
 if(error) throw error;
+
 if(!data || !data.success){
 throw new Error(data?.message || "تعذر حفظ التقييم");
 }
 
 showMessage(box,data.message,"success");
+
 document.getElementById("ratingComment").disabled = true;
 
 document.querySelectorAll(".star").forEach(button=>{
@@ -213,7 +226,9 @@ submitButton.textContent = "تم إرسال التقييم";
 
 }catch(error){
 console.error(error);
+
 showMessage(box,error.message || "حدث خطأ أثناء إرسال التقييم.","error");
+
 submitButton.disabled = false;
 submitButton.textContent = "إعادة إرسال التقييم";
 }
@@ -225,6 +240,7 @@ const phone = phoneInput.value.trim();
 
 result.replaceChildren();
 result.className = "";
+
 currentOrder = null;
 storeRating = 0;
 driverRating = 0;
@@ -259,7 +275,6 @@ return;
 }
 
 const order = data[0];
-currentOrder = {id:Number(orderId)};
 
 const card = document.createElement("div");
 card.className = "card";
@@ -284,11 +299,14 @@ note.className = "small";
 note.textContent = "تتحدث حالة الطلب عند تغييرها من المدير أو الموصّل.";
 card.appendChild(note);
 
+/* نضيف البطاقة أولاً حتى تصبح عناصر التقييم داخل الصفحة */
+result.appendChild(card);
+
+currentOrder = {id:Number(orderId)};
+
 if(order.order_status === "تم توصيل الطلب"){
 showRatingForm(card);
 }
-
-result.appendChild(card);
 
 }catch(error){
 console.error(error);
@@ -300,5 +318,6 @@ searchButton.textContent = "متابعة الطلب";
 }
 }
 </script>
+
 </body>
 </html>
