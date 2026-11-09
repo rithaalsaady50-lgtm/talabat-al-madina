@@ -6,22 +6,32 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>متابعة الطلب - طلبات المدينة</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <style>
 *{box-sizing:border-box}
 body{margin:0;font-family:Arial;background:#f3f5f8;color:#222}
 header{background:#102a43;color:white;text-align:center;padding:22px}
 .container{max-width:600px;margin:auto;padding:18px}
 .card{background:white;padding:20px;border-radius:14px;margin-top:18px;box-shadow:0 2px 8px #00000012}
-input,button{width:100%;padding:14px;border-radius:8px;font-size:16px;margin:9px 0}
-input{border:1px solid #ccc}
+input,textarea,button{width:100%;padding:14px;border-radius:8px;font-size:16px;margin:9px 0}
+input,textarea{border:1px solid #ccc}
+textarea{resize:vertical;min-height:90px}
 button{border:0;background:#16834a;color:white;cursor:pointer}
-button:disabled{opacity:.6}
+button:disabled{opacity:.6;cursor:not-allowed}
 .status{padding:15px;background:#e8f5ed;color:#16834a;border-radius:10px;text-align:center;font-weight:bold;font-size:19px;margin:15px 0}
 .info{line-height:2;border-bottom:1px solid #eee;padding:10px 0}
 .error{color:#b42318;background:#fff0f0;padding:12px;border-radius:8px;margin-top:12px}
+.success{color:#16834a;background:#e8f5ed;padding:12px;border-radius:8px;margin-top:12px}
 .small{color:#666;font-size:13px;text-align:center}
+.rating-box{margin-top:20px;padding:15px;background:#fff9e8;border-radius:12px}
+.rating-box h3{text-align:center}
+.stars{display:flex;justify-content:center;gap:8px;direction:ltr;margin:12px 0}
+.star{width:auto;background:#ddd;color:#555;font-size:30px;padding:7px 10px;margin:0}
+.star.active{background:#f5b400;color:white}
+.rating-label{text-align:center;font-weight:bold;margin-top:15px}
 </style>
 </head>
+
 <body>
 
 <header>
@@ -35,13 +45,13 @@ button:disabled{opacity:.6}
 <p>أدخل رقم الطلب ورقم هاتفك المسجل عند الطلب.</p>
 
 <input id="orderId" type="number" min="1" placeholder="رقم الطلب مثال: 22">
-
 <input id="customerPhone" type="tel" placeholder="رقم هاتف الزبون" autocomplete="tel">
 
 <button id="searchButton" onclick="trackOrder()">متابعة الطلب</button>
 
 <div id="result"></div>
 </div>
+
 <p class="small">طلبات المدينة © جميع الحقوق محفوظة</p>
 </div>
 
@@ -61,6 +71,10 @@ const orderIdInput = document.getElementById("orderId");
 const phoneInput = document.getElementById("customerPhone");
 const result = document.getElementById("result");
 const searchButton = document.getElementById("searchButton");
+
+let currentOrder = null;
+let storeRating = 0;
+let driverRating = 0;
 
 function formatMoney(value){
 return Number(value || 0).toLocaleString("en-US") + " دينار";
@@ -85,6 +99,165 @@ row.append(strong,span);
 parent.appendChild(row);
 }
 
+function showMessage(parent,message,type){
+const box = document.createElement("div");
+box.className = type;
+box.textContent = message;
+parent.appendChild(box);
+}
+
+function createRatingStars(containerId,type){
+const container = document.getElementById(containerId);
+
+for(let i=1;i<=5;i++){
+const button = document.createElement("button");
+button.type = "button";
+button.className = "star";
+button.textContent = "★";
+button.setAttribute("aria-label","تقييم "+i+" من 5");
+
+button.addEventListener("click",function(){
+if(type === "store"){
+storeRating = i;
+}else{
+driverRating = i;
+}
+
+updateStars(containerId,type,i);
+});
+
+container.appendChild(button);
+}
+}
+
+function updateStars(containerId,type,value){
+const buttons = document
+.getElementById(containerId)
+.querySelectorAll(".star");
+
+buttons.forEach((button,index)=>{
+button.classList.toggle("active",index < value);
+});
+}
+
+function showRatingForm(parent){
+
+const box = document.createElement("div");
+box.className = "rating-box";
+
+const heading = document.createElement("h3");
+heading.textContent = "⭐ قيّم تجربتك";
+
+const storeLabel = document.createElement("p");
+storeLabel.className = "rating-label";
+storeLabel.textContent = "تقييم المتجر";
+
+const storeStars = document.createElement("div");
+storeStars.className = "stars";
+storeStars.id = "storeStars";
+
+const driverLabel = document.createElement("p");
+driverLabel.className = "rating-label";
+driverLabel.textContent = "تقييم السائق";
+
+const driverStars = document.createElement("div");
+driverStars.className = "stars";
+driverStars.id = "driverStars";
+
+const comment = document.createElement("textarea");
+comment.id = "ratingComment";
+comment.maxLength = 500;
+comment.placeholder = "اكتب تعليقك (اختياري)";
+
+const submit = document.createElement("button");
+submit.id = "submitRating";
+submit.textContent = "إرسال التقييم";
+submit.addEventListener("click",submitRating);
+
+box.append(
+heading,
+storeLabel,
+storeStars,
+driverLabel,
+driverStars,
+comment,
+submit
+);
+
+parent.appendChild(box);
+
+createRatingStars("storeStars","store");
+createRatingStars("driverStars","driver");
+}
+
+async function submitRating(){
+
+const submitButton = document.getElementById("submitRating");
+const comment = document.getElementById("ratingComment").value.trim();
+
+const oldMessage = document.getElementById("ratingMessage");
+if(oldMessage) oldMessage.remove();
+
+if(!storeRating || !driverRating){
+showMessage(
+document.querySelector(".rating-box"),
+"يرجى اختيار تقييم المتجر والسائق.",
+"error"
+);
+return;
+}
+
+submitButton.disabled = true;
+submitButton.textContent = "جارٍ إرسال التقييم...";
+
+try{
+
+const {data,error} = await db.rpc(
+"submit_order_rating",
+{
+p_order_id: currentOrder.id,
+p_customer_phone: phoneInput.value.trim(),
+p_store_rating: storeRating,
+p_driver_rating: driverRating,
+p_comment: comment || null
+}
+);
+
+if(error) throw error;
+
+if(!data || !data.success){
+throw new Error(data?.message || "تعذر حفظ التقييم");
+}
+
+const box = document.querySelector(".rating-box");
+
+showMessage(box,data.message,"success");
+
+document.getElementById("ratingComment").disabled = true;
+
+document.querySelectorAll(".star").forEach(button=>{
+button.disabled = true;
+});
+
+submitButton.textContent = "تم إرسال التقييم";
+submitButton.disabled = true;
+
+}catch(error){
+console.error(error);
+
+const box = document.querySelector(".rating-box");
+
+showMessage(
+box,
+error.message || "حدث خطأ أثناء إرسال التقييم.",
+"error"
+);
+
+submitButton.disabled = false;
+submitButton.textContent = "إعادة إرسال التقييم";
+}
+}
+
 async function trackOrder(){
 
 const orderId = orderIdInput.value.trim();
@@ -92,6 +265,10 @@ const phone = phoneInput.value.trim();
 
 result.replaceChildren();
 result.className = "";
+
+currentOrder = null;
+storeRating = 0;
+driverRating = 0;
 
 if(!orderId || !/^[0-9]+$/.test(orderId) || Number(orderId) <= 0){
 result.textContent = "يرجى إدخال رقم طلب صحيح.";
@@ -151,7 +328,16 @@ note.className = "small";
 note.textContent = "تتحدث حالة الطلب عند تغييرها من المدير أو الموصّل.";
 
 card.appendChild(note);
+
+if(order.order_status === "تم توصيل الطلب"){
+showRatingForm(card);
+}
+
 result.appendChild(card);
+
+currentOrder = {
+id: Number(orderId)
+};
 
 }catch(error){
 console.error(error);
