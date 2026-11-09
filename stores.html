@@ -1,11 +1,10 @@
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>متاجر طلبات المدينة</title>
-
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box}
 body{margin:0;font-family:Arial;background:#f3f5f8}
@@ -15,17 +14,17 @@ input{width:100%;padding:14px;border:1px solid #ddd;border-radius:10px;font-size
 .stores{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
 .store{background:white;padding:18px 10px;text-align:center;border-radius:12px;box-shadow:0 2px 8px #00000012}
 .store h3{color:#102a43}
+.rating{color:#e6a400;font-size:18px;margin:10px 0}
+.rating-count{color:#666;font-size:13px}
 button{background:#16834a;color:white;border:0;padding:11px 15px;border-radius:8px;font-size:15px;cursor:pointer}
 button:disabled{opacity:.6}
 .back{background:#102a43;margin-bottom:15px}
 .favorite{background:#f1f1f1;color:#d62950;margin:8px 0;width:100%}
 .favorite.saved{background:#ffe5ec;color:#d62950}
 .message{background:white;padding:15px;border-radius:10px;text-align:center;grid-column:1/-1}
+@media(max-width:350px){.stores{grid-template-columns:1fr}}
 </style>
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-
 <body>
 
 <header>
@@ -34,27 +33,19 @@ button:disabled{opacity:.6}
 </header>
 
 <div class="container">
-
 <button class="back" onclick="location.href='index.html'">رجوع للأقسام</button>
-
 <h3 id="categoryTitle">المتاجر</h3>
-
 <input id="search" placeholder="ابحث عن متجر..." oninput="showStores()">
-
 <div class="stores" id="stores">
 <div class="message">جاري تحميل المتاجر...</div>
 </div>
-
 </div>
 
 <script>
 const SUPABASE_URL="https://iombzxymujzetguqdhkq.supabase.co";
 const SUPABASE_KEY="sb_publishable_dTg1TjFIepJqVTycKHe42A_DW0ZwNT_";
 
-const db=window.supabase.createClient(
-  SUPABASE_URL,
-  SUPABASE_KEY
-);
+const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 
 const params=new URLSearchParams(location.search);
 const selectedCategory=(params.get("category")||"").trim();
@@ -67,14 +58,12 @@ let currentUser=null;
 let favoriteStores=[];
 
 async function loadFavorites(){
-  const {data,error}=await db
-    .from("favorites")
+  const {data,error}=await db.from("favorites")
     .select("id,item_id,item_name")
     .eq("user_id",currentUser.id)
     .eq("item_type","store");
 
   if(error) throw error;
-
   favoriteStores=data||[];
 }
 
@@ -99,8 +88,7 @@ async function toggleFavorite(store,button){
     );
 
     if(existing){
-      const {error}=await db
-        .from("favorites")
+      const {error}=await db.from("favorites")
         .delete()
         .eq("id",existing.id)
         .eq("user_id",currentUser.id);
@@ -113,8 +101,7 @@ async function toggleFavorite(store,button){
 
       alert("تم حذف المتجر من المفضلة");
     }else{
-      const {data,error}=await db
-        .from("favorites")
+      const {data,error}=await db.from("favorites")
         .insert({
           user_id:currentUser.id,
           item_type:"store",
@@ -126,14 +113,11 @@ async function toggleFavorite(store,button){
         .single();
 
       if(error) throw error;
-
       favoriteStores.push(data);
-
       alert("تمت إضافة المتجر للمفضلة بنجاح ✓");
     }
 
     showStores();
-
   }catch(error){
     alert("تعذر تحديث المفضلة: "+error.message);
     console.error(error);
@@ -147,14 +131,11 @@ async function loadStores(){
 
   try{
     const {data:userData,error:userError}=await db.auth.getUser();
-
     if(userError) throw userError;
 
     currentUser=userData.user;
 
-    if(currentUser){
-      await loadFavorites();
-    }
+    if(currentUser) await loadFavorites();
 
     let query=db.from("stores")
       .select("id,name,category,is_active")
@@ -166,10 +147,25 @@ async function loadStores(){
     }
 
     const {data,error}=await query;
-
     if(error) throw error;
 
     allStores=data||[];
+
+    const {data:ratings,error:ratingError}=await db.rpc("get_store_ratings");
+
+    if(ratingError) throw ratingError;
+
+    const ratingMap={};
+
+    (ratings||[]).forEach(item=>{
+      ratingMap[String(item.store_id)]=item;
+    });
+
+    allStores=allStores.map(store=>({
+      ...store,
+      rating:ratingMap[String(store.id)]||null
+    }));
+
     showStores();
 
   }catch(error){
@@ -219,16 +215,29 @@ function showStores(){
     const category=document.createElement("p");
     category.textContent=store.category||"";
 
+    const rating=document.createElement("div");
+    rating.className="rating";
+
+    if(store.rating && Number(store.rating.rating_count)>0){
+      const average=Number(store.rating.average_rating);
+      const count=Number(store.rating.rating_count);
+
+      rating.innerHTML=
+        '⭐ '+average.toFixed(1)+' / 5'+
+        '<div class="rating-count">('+count+' تقييم)</div>';
+    }else{
+      rating.innerHTML=
+        '⭐ لا توجد تقييمات بعد';
+    }
+
     const favoriteButton=document.createElement("button");
     favoriteButton.className="favorite";
 
     function updateFavoriteButton(){
       const saved=currentUser&&isFavorite(store.id);
-
       favoriteButton.textContent=saved?
         "❤️ في المفضلة":
         "♥ إضافة للمفضلة";
-
       favoriteButton.classList.toggle("saved",!!saved);
     }
 
@@ -247,13 +256,12 @@ function showStores(){
         "&store="+encodeURIComponent(store.name);
     };
 
-    card.append(name,category,favoriteButton,button);
+    card.append(name,category,rating,favoriteButton,button);
     area.appendChild(card);
   });
 }
 
 loadStores();
 </script>
-
 </body>
 </html>
